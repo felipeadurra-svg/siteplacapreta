@@ -1,0 +1,24 @@
+{
+    "id": "Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b",
+    "nome": "Felipe Lima de Arruda",
+    "email": "felipeadurra@gmail.com",
+    "telefone": "11978710525",
+    "veiculo": {
+        "marca": "Volkswagem",
+        "modelo": "Fusca",
+        "ano": "1980"
+    },
+    "data": "2026-03-31T18:24:20.943279",
+    "fotos": {
+        "frente": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/frente.jpg",
+        "traseira": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/traseira.jpg",
+        "lateral_direita": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/lateral_direita.jpg",
+        "lateral_esquerda": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/lateral_esquerda.jpg",
+        "interior": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/interior.jpg",
+        "painel": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/painel.jpg",
+        "motor": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/motor.jpg",
+        "porta_malas": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/porta_malas.jpg",
+        "chassi": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/chassi.jpg",
+        "adicional": "uploads/Felipe_Lima_de_Arruda_11978710525_20260331_182420_f23e0b/adicional.jpg"
+    }
+}
