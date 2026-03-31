@@ -8,28 +8,25 @@ from datetime import datetime
 
 app = FastAPI()
 
-# 🌍 CORS (produção + Vercel)
+# 🌍 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # depois podemos travar pra sua Vercel se quiser
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 📁 pasta uploads (Render precisa disso no root)
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-# 📸 salva imagem com segurança
 def salvar_imagem(file: UploadFile, caminho: str):
     if not file:
         return None
 
     try:
         content = file.file.read()
-
         if not content:
             return None
 
@@ -43,13 +40,11 @@ def salvar_imagem(file: UploadFile, caminho: str):
         return None
 
 
-# 🚀 rota principal
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     telefone: Optional[str] = Form(None),
-
     marca: Optional[str] = Form(None),
     modelo: Optional[str] = Form(None),
     ano: Optional[str] = Form(None),
@@ -66,7 +61,6 @@ async def avaliacao(
     foto_adicional: Optional[UploadFile] = File(None),
 ):
 
-    # 🧼 limpeza de dados
     nome_limpo = (nome or "cliente").strip().replace(" ", "_")
     telefone_limpo = (telefone or "sem_numero").strip().replace(" ", "")
 
@@ -75,11 +69,9 @@ async def avaliacao(
 
     cliente_id = f"{nome_limpo}_{telefone_limpo}_{timestamp}_{uid}"
 
-    # 📁 pasta do cliente
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
-    # 📦 dados base
     dados = {
         "id": cliente_id,
         "nome": nome,
@@ -95,7 +87,6 @@ async def avaliacao(
 
     json_path = os.path.join(pasta, "dados.json")
 
-    # 📸 fotos
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
@@ -111,7 +102,6 @@ async def avaliacao(
 
     dados["fotos"] = fotos
 
-    # 💾 salva JSON final
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
@@ -123,7 +113,6 @@ async def avaliacao(
     }
 
 
-# 🧪 rota teste (IMPORTANTE pro Render)
 @app.get("/")
 def root():
     return {"status": "backend rodando 🚀"}
