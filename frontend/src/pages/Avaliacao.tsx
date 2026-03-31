@@ -61,7 +61,7 @@ const Avaliacao = () => {
       }
     });
 
-    const res = await fetch("http://localhost:8001/avaliacao", {
+    const res = await fetch("//siteplacapreta.onrender.com/avaliacao", {
       method: "POST",
       body: form,
     });
