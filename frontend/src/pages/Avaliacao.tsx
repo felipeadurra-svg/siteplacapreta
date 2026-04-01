@@ -142,7 +142,7 @@ const Avaliacao = () => {
                 Avaliação enviada com sucesso!
               </h2>
               <p className="text-gray-500 mt-2">
-                Você receberá o resultado no seu email.
+                Você receberá o resultado via email.
               </p>
 
               <Link to="/">
