@@ -8,8 +8,13 @@ from zoneinfo import ZoneInfo
 import os
 import uuid
 import json
+import base64
+from openai import OpenAI
 
 app = FastAPI()
+
+# 🔑 OPENAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 🌍 CORS
 app.add_middleware(
@@ -31,19 +36,90 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def salvar_imagem(file: UploadFile, caminho: str):
     if not file:
         return None
-
     try:
         content = file.file.read()
-        if not content:
-            return None
-
         with open(caminho, "wb") as f:
             f.write(content)
-
         return caminho
     except Exception as e:
         print("Erro imagem:", e)
         return None
+
+
+# 🧠 CONVERTER IMAGEM PARA BASE64
+def img_to_base64(path):
+    if not path or not os.path.exists(path):
+        return None
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
+# 🤖 GERAR RELATÓRIO COM VISION (GPT-4o)
+def gerar_relatorio(dados, fotos_urls):
+
+    imagens = []
+
+    for nome, path in fotos_urls.items():
+        b64 = img_to_base64(path)
+        if b64:
+            imagens.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{b64}"
+                }
+            })
+
+    prompt = f"""
+Você é um perito automotivo especializado em avaliação técnica.
+
+Analise as imagens do veículo e gere um RELATÓRIO TÉCNICO COMPLETO seguindo padrão profissional semelhante à vistoria da Federação Brasileira de Veículos Antigos (FBVA/FBFV).
+
+Dados do veículo:
+- Marca: {dados['veiculo']['marca']}
+- Modelo: {dados['veiculo']['modelo']}
+- Ano: {dados['veiculo']['ano']}
+
+Regras:
+- NÃO invente dados que não estejam visíveis
+- Descreva estado real baseado nas imagens
+- Identifique possíveis:
+  - riscos
+  - amassados
+  - desgaste
+  - pintura
+  - interior
+  - motor
+- Classifique o estado geral (RUIM / REGULAR / BOM / EXCELENTE)
+- Seja técnico e detalhado
+
+Formato:
+1. Resumo geral
+2. Exterior
+3. Interior
+4. Motor e mecânica
+5. Estrutura
+6. Conclusão final
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "Você é um especialista automotivo perito em vistoria técnica."
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *imagens
+                ]
+            }
+        ],
+        temperature=0.2
+    )
+
+    return response.choices[0].message.content
 
 
 # 📥 RECEBER AVALIAÇÃO
@@ -79,12 +155,10 @@ async def avaliacao(
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
-    # 🇧🇷 horário Brasília
     data_brasil = datetime.now(
         ZoneInfo("America/Sao_Paulo")
     ).strftime("%d/%m/%Y %H:%M:%S")
 
-    # 💾 dados do cliente
     dados = {
         "id": cliente_id,
         "nome": nome,
@@ -100,21 +174,23 @@ async def avaliacao(
 
     json_path = os.path.join(pasta, "dados.json")
 
-    # 📸 fotos
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral_direita.jpg"),
-        "lateral_esquerda": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral_esquerda.jpg"),
+        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral.jpg"),
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
-        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
+        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
     }
 
     dados["fotos"] = fotos
+
+    # 🤖 GERAR RELATÓRIO REAL COM VISION
+    try:
+        relatorio = gerar_relatorio(dados, fotos)
+        dados["relatorio_ai"] = relatorio
+    except Exception as e:
+        dados["relatorio_ai"] = f"Erro ao gerar relatório: {str(e)}"
 
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
@@ -147,16 +223,9 @@ def avaliacoes():
             with open(json_path, "r", encoding="utf-8") as f:
                 dados = json.load(f)
 
-        clientes.append({
-            "id": pasta_cliente,
-            "dados": dados
-        })
+        clientes.append({"id": pasta_cliente, "dados": dados})
 
-    # 🔥 mais recente primeiro
-    clientes.sort(
-        key=lambda c: c["dados"].get("data", ""),
-        reverse=True
-    )
+    clientes.sort(key=lambda c: c["dados"].get("data", ""), reverse=True)
 
     html = """
     <html>
@@ -166,11 +235,11 @@ def avaliacoes():
             body { font-family: Arial; background:#f4f4f4; padding:20px; }
             .card { background:white; padding:15px; margin-bottom:15px; border-radius:10px; }
             .btn { padding:8px 12px; background:black; color:white; text-decoration:none; border-radius:6px; }
-            .linha { display:flex; justify-content:space-between; align-items:center; }
+            pre { white-space: pre-wrap; }
         </style>
     </head>
     <body>
-        <h1>📊 Avaliações Recebidas</h1>
+        <h1>📊 Avaliações</h1>
     """
 
     for c in clientes:
@@ -178,25 +247,18 @@ def avaliacoes():
 
         html += f"""
         <div class="card">
-            <div class="linha">
-                <div>
-                    <b>👤 {d.get('nome','Sem nome')}</b><br>
-                    📞 {d.get('telefone','')}<br>
-                    ✉️ {d.get('email','Não informado')}<br>
-                    📅 {d.get('data','')}
-                </div>
-
-                <a class="btn" href="/cliente/{c['id']}">Ver</a>
-            </div>
+            <b>{d.get('nome','')}</b><br>
+            📞 {d.get('telefone','')}<br>
+            📅 {d.get('data','')}<br>
+            <a class="btn" href="/cliente/{c['id']}">Ver</a>
         </div>
         """
 
     html += "</body></html>"
+    return HTMLResponse(html)
 
-    return HTMLResponse(content=html)
 
-
-# 👤 CLIENTE INDIVIDUAL
+# 👤 CLIENTE
 @app.get("/cliente/{cliente_id}", response_class=HTMLResponse)
 def cliente(cliente_id: str):
 
@@ -204,7 +266,7 @@ def cliente(cliente_id: str):
     json_path = os.path.join(pasta, "dados.json")
 
     if not os.path.exists(json_path):
-        return HTMLResponse("<h1>Cliente não encontrado</h1>")
+        return HTMLResponse("Cliente não encontrado")
 
     with open(json_path, "r", encoding="utf-8") as f:
         dados = json.load(f)
@@ -216,30 +278,19 @@ def cliente(cliente_id: str):
 
     html = f"""
     <html>
-    <head>
-        <title>Cliente</title>
-        <style>
-            body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
-            .card {{ background:white; padding:15px; border-radius:10px; }}
-            img {{ width:200px; border-radius:8px; margin:5px; }}
-        </style>
-    </head>
-    <body>
+    <body style="font-family:Arial;padding:20px">
 
-    <a href="/avaliacoes">⬅ Voltar</a>
+    <h2>{dados.get("nome","")}</h2>
 
-    <div class="card">
-        <h2>👤 {dados.get('nome','')}</h2>
-        <p>📞 {dados.get('telefone','')}</p>
-        <p>✉️ {dados.get('email','')}</p>
-        <p>📅 {dados.get('data','')}</p>
-
-        <h3>📸 Fotos</h3>
+    <h3>📸 Fotos</h3>
     """
 
     for f in fotos:
-        html += f'<img src="{f}"/>'
+        html += f'<img src="{f}" width="200"/>'
 
-    html += "</div></body></html>"
+    html += "<h3>🤖 Relatório IA</h3>"
+    html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
 
-    return HTMLResponse(content=html)
+    html += "</body></html>"
+
+    return HTMLResponse(html)
