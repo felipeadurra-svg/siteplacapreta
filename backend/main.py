@@ -115,4 +115,4 @@ async def avaliacao(
 
 @app.get("/")
 def root():
-    return {"status": "backend rodando 🚀"}
+    return {"status": "backend Funcionando 🚀"}
