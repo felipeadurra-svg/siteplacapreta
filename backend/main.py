@@ -227,6 +227,8 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None),
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
+    foto_porta_malas: Optional[UploadFile] = File(None),
+    foto_adicional: Optional[UploadFile] = File(None),
 ):
 
     cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
