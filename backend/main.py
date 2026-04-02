@@ -61,7 +61,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT (NÃO ALTERADO - COMO PEDIDO)
+# 🧠 PROMPT (NÃO ALTERADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -162,7 +162,7 @@ APROVADO ou REPROVADO para placa preta
 """
 
 
-# 🤖 IA VISTORIA
+# 🤖 IA
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -308,7 +308,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE
+# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -336,12 +336,9 @@ def cliente(id: str):
             .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
             .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
-            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; display:inline-block; margin-bottom:10px; }}
         </style>
     </head>
     <body>
-
-    <a class="btn" href="/avaliacoes">⬅ Voltar</a>
 
     <div class="card">
         👤 <b>{d.get("nome")}</b><br>
