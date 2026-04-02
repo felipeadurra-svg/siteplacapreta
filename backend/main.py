@@ -10,6 +10,7 @@ import os
 import uuid
 import json
 import base64
+import hashlib
 
 app = FastAPI()
 
@@ -54,7 +55,115 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🤖 IA VISTORIA NÍVEL PERITO
+# 🔐 hash simples
+def gerar_hash(nome, data, nota):
+    raw = f"{nome}-{data}-{nota}".encode()
+    return hashlib.md5(raw).hexdigest()
+
+
+# 🧠 PROMPT NOVO (BASEADO NO SEU RELATÓRIO REAL)
+def gerar_prompt():
+    return """
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+
+⚠️ REGRAS CRÍTICAS:
+- NÃO inventar peças não visíveis
+- NÃO usar fórmulas, pesos ou cálculos
+- NÃO mostrar lógica de pontuação
+- Linguagem técnica estilo clube de antigomobilismo
+- Base apenas em evidência visual
+
+────────────────────────────────────────
+
+📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise
+
+────────────────────────────────────────
+
+I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+Avaliar:
+- alinhamento de portas, capô e tampa
+- pintura (original / repintura / verniz moderno)
+- cromados e lanternas
+- rodas e pneus
+- sinais de restauração
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+Avaliar:
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- conservação geral
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+Avaliar:
+- organização do cofre
+- fiação aparente
+- componentes originais visíveis
+- suspensão e rodas (aspecto visual)
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+Avaliar:
+- estrutura
+- borrachas
+- desgaste natural
+
+📌 Subtotal: XX / 10
+
+────────────────────────────────────────
+
+📊 RESULTADO FINAL
+Carroceria / Interior / Mecânica / Conservação
+TOTAL: XX / 100
+
+────────────────────────────────────────
+
+🏁 VEREDITO FINAL
+APROVADO ou REPROVADO para placa preta
+
+────────────────────────────────────────
+
+💰 ANÁLISE DE MERCADO
+- venda rápida
+- mercado particular
+- pós certificação
+
+────────────────────────────────────────
+
+🧠 RECOMENDAÇÕES
+- melhorias técnicas
+- peças originais
+- ajustes para aprovação futura
+
+────────────────────────────────────────
+
+✍️ ASSINATURA
+"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
+"""
+
+
+# 🤖 IA VISTORIA PROFISSIONAL
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -74,110 +183,7 @@ def gerar_relatorio(fotos, dados):
             }
         })
 
-    prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS E ANTIGOS.
-
----
-
-## DADOS DO FORMULÁRIO
-Marca informada: {dados.get("marca")}
-Modelo informado: {dados.get("modelo")}
-Ano informado: {dados.get("ano")}
-
----
-
-## ETAPA 1 — IDENTIFICAÇÃO DO VEÍCULO
-
-Analise as imagens e determine:
-
-- Marca provável
-- Modelo provável
-- Ano aproximado ou geração
-- País de origem
-- Nível de confiança (%)
-
-Se não tiver certeza:
-- declare IDENTIFICAÇÃO INCONCLUSIVA
-- explique o motivo
-
----
-
-## ETAPA 2 — REFERÊNCIA ORIGINAL DE FÁBRICA
-
-Descreva como o veículo ORIGINAL deveria ser:
-
-- motor original esperado
-- interior original
-- painel original
-- rodas originais
-- lanternas/faróis originais
-- acabamento de fábrica
-
-Se não identificar o modelo:
-→ use referência genérica de veículo clássico similar
-
----
-
-## ETAPA 3 — ANÁLISE DAS IMAGENS
-
-Analise cada imagem:
-
-📸 Imagem 1:
-📸 Imagem 2:
-📸 Imagem 3:
-...
-
-Para cada:
-- descrição técnica
-- estado de conservação
-- alterações visíveis
-- observações relevantes
-
----
-
-## ETAPA 4 — ORIGINALIDADE REAL (%)
-
-Compare com padrão original e avalie:
-
-- % originalidade geral
-- peças não originais
-- sinais de restauração
-- sinais de modificação
-
----
-
-## ETAPA 5 — AVALIAÇÃO TÉCNICA (0–100)
-
-- Originalidade
-- Lataria/Pintura
-- Interior
-- Motor
-- Estrutura
-- Conservação geral
-
----
-
-## ETAPA 6 — NOTA FINAL
-
-Explique tecnicamente a nota final.
-
----
-
-## ETAPA 7 — STATUS PLACA PRETA
-
-- APROVADO / REPROVADO / EM ANÁLISE
-- justificativa técnica
-
----
-
-## ETAPA 8 — VALOR DE MERCADO
-
-Estimativa baseada em:
-- modelo identificado
-- originalidade
-- conservação
-- raridade
-"""
+    prompt = gerar_prompt()
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -243,7 +249,8 @@ async def avaliacao(
     }
 
     try:
-        dados["relatorio_ai"] = gerar_relatorio(fotos, dados["veiculo"])
+        relatorio = gerar_relatorio(fotos, dados["veiculo"])
+        dados["relatorio_ai"] = relatorio
     except Exception as e:
         dados["relatorio_ai"] = str(e)
 
@@ -277,7 +284,7 @@ def avaliacoes():
         </style>
     </head>
     <body>
-    <h1>📊 Dashboard</h1>
+    <h1>📊 Dashboard Vistoria Placa Preta</h1>
     """
 
     for id_, d in clientes:
@@ -319,40 +326,11 @@ def cliente(id: str):
     <head>
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
-
-            .card {{
-                background:#fff;
-                padding:15px;
-                margin-bottom:15px;
-                border-radius:10px;
-            }}
-
-            .grid {{
-                display:grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap:10px;
-            }}
-
-            .grid img {{
-                width:100%;
-                height:140px;
-                object-fit:cover;
-                border-radius:8px;
-            }}
-
-            pre {{
-                white-space:pre-wrap;
-            }}
-
-            .btn {{
-                background:#000;
-                color:#fff;
-                padding:8px 12px;
-                text-decoration:none;
-                border-radius:6px;
-                display:inline-block;
-                margin-bottom:10px;
-            }}
+            .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
+            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+            .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
+            pre {{ white-space:pre-wrap; }}
+            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; display:inline-block; margin-bottom:10px; }}
         </style>
     </head>
     <body>
@@ -373,17 +351,22 @@ def cliente(id: str):
     for f in fotos:
         html += f'<img src="{f}"/>'
 
-    html += """
+    html += f"""
         </div>
     </div>
 
     <div class="card">
         <h3>🤖 Relatório Técnico</h3>
-        <pre>{}</pre>
+        <pre>{d.get("relatorio_ai","")}</pre>
+    </div>
+
+    <div class="card">
+        <h3>🏁 Validação</h3>
+        <p>Assinatura digital: <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b></p>
     </div>
 
     </body>
     </html>
-    """.format(d.get("relatorio_ai", ""))
+    """
 
     return HTMLResponse(html)
