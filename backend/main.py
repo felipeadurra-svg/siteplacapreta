@@ -33,6 +33,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
+# 💾 salvar imagem
 def salvar_imagem(file: UploadFile, path: str):
     if not file:
         return None
@@ -46,6 +47,7 @@ def salvar_imagem(file: UploadFile, path: str):
     return path
 
 
+# 🧠 base64
 def to_base64(path):
     if not path or not os.path.exists(path):
         return None
@@ -53,9 +55,112 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
+# 🔐 hash simples
 def gerar_hash(nome, data, nota):
     raw = f"{nome}-{data}-{nota}".encode()
     return hashlib.md5(raw).hexdigest()
+
+
+# 🧠 PROMPT NOVO (BASEADO NO SEU RELATÓRIO REAL)
+def gerar_prompt():
+    return """
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+
+⚠️ REGRAS CRÍTICAS:
+- NÃO inventar peças não visíveis
+- NÃO usar fórmulas, pesos ou cálculos
+- NÃO mostrar lógica de pontuação
+- Linguagem técnica estilo clube de antigomobilismo
+- Base apenas em evidência visual
+
+────────────────────────────────────────
+
+📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise
+
+────────────────────────────────────────
+
+I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+Avaliar:
+- alinhamento de portas, capô e tampa
+- pintura (original / repintura / verniz moderno)
+- cromados e lanternas
+- rodas e pneus
+- sinais de restauração
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+Avaliar:
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- conservação geral
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+Avaliar:
+- organização do cofre
+- fiação aparente
+- componentes originais visíveis
+- suspensão e rodas (aspecto visual)
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+Avaliar:
+- estrutura
+- borrachas
+- desgaste natural
+
+📌 Subtotal: XX / 10
+
+────────────────────────────────────────
+
+📊 RESULTADO FINAL
+Carroceria / Interior / Mecânica / Conservação
+TOTAL: XX / 100
+
+────────────────────────────────────────
+
+🏁 VEREDITO FINAL
+APROVADO ou REPROVADO para placa preta
+
+────────────────────────────────────────
+
+💰 ANÁLISE DE MERCADO
+- venda rápida
+- mercado particular
+- pós certificação
+
+────────────────────────────────────────
+
+🧠 RECOMENDAÇÕES
+- melhorias técnicas
+- peças originais
+- ajustes para aprovação futura
+
+────────────────────────────────────────
+
+✍️ ASSINATURA
+"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
+"""
 
 
 # 🤖 IA VISTORIA PROFISSIONAL
@@ -78,90 +183,7 @@ def gerar_relatorio(fotos, dados):
             }
         })
 
-    prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS PARA PLACA PRETA.
-
----
-
-# 🔎 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano exato ou estimado
-- Geração
-- Confiança (%)
-
-Se não tiver certeza:
-→ ANO INCONCLUSIVO
-
----
-
-# 🕰️ REGRA PLACA PRETA
-IDADE ≥ 30 ANOS
-Se não tiver:
-→ REPROVADO AUTOMÁTICO
-
----
-
-# 🏭 ORIGINAL DE FÁBRICA
-Descreva originalidade do veículo
-
----
-
-# ⚖️ ORIGINALIDADE (%)
-Calcular percentual real
-
----
-
-# 📊 NOTA FINAL (0–100)
-Peso:
-- Originalidade 40%
-- Conservação 20%
-- Motor 15%
-- Interior 15%
-- Estrutura 10%
-
----
-
-# 💰 VALOR DE MERCADO (NOVO!)
-Você DEVE calcular:
-
-1. 💵 Valor atual do veículo no mercado brasileiro (R$)
-2. 🏁 Valor se APROVADO placa preta (R$)
-3. 📈 Percentual de valorização
-
-Basear em:
-- modelo
-- ano
-- estado
-- originalidade
-- raridade
-
----
-
-# 🧮 DECISÃO FINAL
-Se idade ≥ 30:
-- ≥ 80 → APROVADO
-- < 80 → REPROVADO
-Se idade < 30 → REPROVADO
-
----
-
-# 🏁 SELO OFICIAL
-🏁 PLACA PRETA: APROVADO ou REPROVADO
-"Perito IA Automotivo v2.0"
-
----
-
-# ⚠️ RECOMENDAÇÕES (IMPORTANTE)
-Se e SOMENTE se REPROVADO:
-- melhorias práticas
-- peças originais
-- ajustes
-
-Se APROVADO:
-→ NÃO mostrar recomendações
-
-"""
+    prompt = gerar_prompt()
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -180,6 +202,7 @@ Se APROVADO:
     return response.choices[0].message.content
 
 
+# 📥 upload
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -237,6 +260,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id}
 
 
+# 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
 
@@ -269,6 +293,7 @@ def avaliacoes():
             <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br><br>
+
             <a class="btn" href="/cliente/{id_}">Ver relatório</a>
         </div>
         """
@@ -277,6 +302,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
+# 👤 CLIENTE
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -304,7 +330,7 @@ def cliente(id: str):
             .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
             .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
-            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; }}
+            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; display:inline-block; margin-bottom:10px; }}
         </style>
     </head>
     <body>
