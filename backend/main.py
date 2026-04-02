@@ -61,109 +61,141 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT NOVO (BASEADO NO SEU RELATÓRIO REAL)
+# 🧠 PROMPT (NÃO ALTERADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
 
-Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL, com padrão de certificação de veículos clássicos.
 
-⚠️ REGRAS CRÍTICAS:
-- NÃO inventar peças não visíveis
-- NÃO usar fórmulas, pesos ou cálculos
-- NÃO mostrar lógica de pontuação
-- Linguagem técnica estilo clube de antigomobilismo
-- Base apenas em evidência visual
+⚠️ REGRAS CRÍTICAS (OBRIGATÓRIO)
+NÃO inventar peças ou detalhes não visíveis nas imagens
+NÃO inferir componentes fora do campo visual
+NÃO usar fórmulas matemáticas, pesos ou cálculos
+NÃO mostrar lógica interna de pontuação
+NÃO descontar pontos sem evidência visual clara
+Linguagem técnica, formal, estilo clube de antigomobilismo
+Base 100% em evidência fotográfica
+Proibido suposições não observáveis
+⚖️ REGRA DE PONTUAÇÃO (CRÍTICA)
+A pontuação deve ser conservadora e tecnicamente justificável
+Só pode haver desconto quando houver prova visual clara
+Cada desconto deve ser acompanhado de:
 
-────────────────────────────────────────
+👉 Justificativa técnica objetiva baseada na imagem
 
+Exemplo:
+
+“Redução de 2 pontos devido a indícios visuais de repintura na lateral esquerda, perceptível por variação de reflexo e textura”
+Se não houver evidência clara → pontuação máxima mantida
+Nunca estimar desgaste sem base visual
 📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
-
 📌 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano estimado
-- Geração
-- Confiança da análise
-
-────────────────────────────────────────
-
+Marca
+Modelo
+Ano estimado
+Geração
+Confiança da análise (baixa / média / alta baseada em evidência visual)
 I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+
 Avaliar:
-- alinhamento de portas, capô e tampa
-- pintura (original / repintura / verniz moderno)
-- cromados e lanternas
-- rodas e pneus
-- sinais de restauração
+
+alinhamento de portas, capô e tampa
+qualidade da pintura (originalidade vs repintura)
+cromados, frisos e lanternas
+rodas e pneus
+sinais visuais de restauração
 
 📌 Subtotal: XX / 30
-
-────────────────────────────────────────
+📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+
 Avaliar:
-- painel e instrumentação
-- volante
-- bancos e tecidos
-- forrações
-- conservação geral
+
+painel e instrumentação
+volante
+bancos e tecidos
+forrações
+estado geral de conservação
 
 📌 Subtotal: XX / 30
-
-────────────────────────────────────────
+📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+
 Avaliar:
-- organização do cofre
-- fiação aparente
-- componentes originais visíveis
-- suspensão e rodas (aspecto visual)
+
+organização do cofre
+fiação aparente
+originalidade de componentes visíveis
+estado visual da suspensão e conjunto mecânico
 
 📌 Subtotal: XX / 30
-
-────────────────────────────────────────
+📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+
 Avaliar:
-- estrutura
-- borrachas
-- desgaste natural
+
+integridade estrutural aparente
+borrachas e vedação
+desgaste natural compatível com idade
 
 📌 Subtotal: XX / 10
-
-────────────────────────────────────────
+📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 📊 RESULTADO FINAL
-Carroceria / Interior / Mecânica / Conservação
+
 TOTAL: XX / 100
 
-────────────────────────────────────────
-
 🏁 VEREDITO FINAL
-APROVADO ou REPROVADO para placa preta
+APROVADO para placa preta
+ou
+REPROVADO para placa preta
 
-────────────────────────────────────────
+Com justificativa técnica resumida baseada no conjunto visual do veículo.
 
-💰 ANÁLISE DE MERCADO
-- venda rápida
-- mercado particular
-- pós certificação
+💰 ANÁLISE DE MERCADO (BRASIL – CLÁSSICOS)
 
-────────────────────────────────────────
+Apresentar estimativa realista baseada no estado visual do veículo:
 
-🧠 RECOMENDAÇÕES
-- melhorias técnicas
-- peças originais
-- ajustes para aprovação futura
+💵 Venda rápida (liquidez imediata)
+🏷️ Mercado particular (valor médio de negociação real)
+🏆 Pós-certificação placa preta (potencial de valorização)
 
-────────────────────────────────────────
+📌 Valores obrigatoriamente em R$
+📌 Devem refletir coerência com estado visual observado
+📌 Não utilizar valores genéricos desconectados do veículo
 
+🧠 RECOMENDAÇÕES TÉCNICAS (BASEADAS EM FOTOS – OBRIGATÓRIO)
+
+As recomendações devem ser exclusivamente baseadas nas evidências visuais do veículo apresentado.
+
+⚠️ PROIBIDO:
+
+recomendações genéricas
+sugestões sem ligação com imagens
+peças ou intervenções não justificadas visualmente
+
+✔️ O QUE DEVE SER FEITO:
+
+apontar exatamente o que foi visto nas fotos
+indicar onde há necessidade de correção ou atenção
+sugerir ações específicas baseadas em elementos visíveis
+
+📌 Exemplo de formato correto:
+
+“Ajuste recomendado na área do para-choque dianteiro devido a desalinhamento visível na junção com o paralama esquerdo”
+“Substituição de borracha de vedação da porta direita devido a ressecamento visível”
+“Revisão do acabamento do painel devido a sinais de desgaste concentrado na região central”
 ✍️ ASSINATURA
+
 "Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
 """
 
 
-# 🤖 IA VISTORIA PROFISSIONAL
+# 🤖 IA
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -202,7 +234,7 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📥 upload
+# 📥 AVALIAÇÃO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -219,12 +251,18 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None),
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
+
+    foto_porta_malas: Optional[UploadFile] = File(None),
+    foto_chassi: Optional[UploadFile] = File(None),
+    foto_adicional: Optional[UploadFile] = File(None),
 ):
 
     cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
 
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
+
+    url_publica = f"/cliente/{cliente_id}"
 
     dados = {
         "nome": nome,
@@ -235,7 +273,9 @@ async def avaliacao(
             "modelo": modelo,
             "ano": ano
         },
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
+        "id": cliente_id,
+        "url": url_publica
     }
 
     fotos = {
@@ -246,6 +286,9 @@ async def avaliacao(
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
+        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
+        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
+        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
     }
 
     try:
@@ -257,7 +300,7 @@ async def avaliacao(
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
-    return {"ok": True, "id": cliente_id}
+    return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
 # 📊 DASHBOARD
@@ -290,11 +333,14 @@ def avaliacoes():
     for id_, d in clientes:
         html += f"""
         <div class="card">
-            <b>{d.get('nome')}</b><br>
-            📞 {d.get('telefone')}<br>
-            📅 {d.get('data')}<br><br>
 
-            <a class="btn" href="/cliente/{id_}">Ver relatório</a>
+            👤 <b>{d.get('nome')}</b><br>
+            📞 {d.get('telefone')}<br>
+            📅 {d.get('data')}<br>
+            📧 {d.get('email')}<br>
+            🆔 {id_}<br>
+            🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
+
         </div>
         """
 
@@ -302,7 +348,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE
+# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -327,20 +373,21 @@ def cliente(id: str):
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
             .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
-            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+
+            .grid {{ display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }}
+
             .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
-            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; display:inline-block; margin-bottom:10px; }}
         </style>
     </head>
     <body>
 
-    <a class="btn" href="/avaliacoes">⬅ Voltar</a>
-
     <div class="card">
-        <b>{d.get("nome")}</b><br>
+        👤 <b>{d.get("nome")}</b><br>
         📞 {d.get("telefone")}<br>
-        📅 {d.get("data")}
+        📅 {d.get("data")}<br>
+        📧 {d.get("email")}<br>
+        🆔 {d.get("id")}<br>
     </div>
 
     <div class="card">
