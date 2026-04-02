@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from openai import OpenAI
@@ -70,91 +70,6 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 - NÃO mostrar lógica de pontuação
 - Linguagem técnica estilo clube de antigomobilismo
 - Base apenas em evidência visual
-
-────────────────────────────────────────
-
-📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
-
-📌 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano estimado
-- Geração
-- Confiança da análise
-
-────────────────────────────────────────
-
-I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
-Avaliar:
-- alinhamento de portas, capô e tampa
-- pintura (original / repintura / verniz moderno)
-- cromados e lanternas
-- rodas e pneus
-- sinais de restauração
-
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
-Avaliar:
-- painel e instrumentação
-- volante
-- bancos e tecidos
-- forrações
-- conservação geral
-
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
-Avaliar:
-- organização do cofre
-- fiação aparente
-- componentes originais visíveis
-- suspensão e rodas (aspecto visual)
-
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
-Avaliar:
-- estrutura
-- borrachas
-- desgaste natural
-
-📌 Subtotal: XX / 10
-
-────────────────────────────────────────
-
-📊 RESULTADO FINAL
-TOTAL: XX / 100
-
-────────────────────────────────────────
-
-🏁 VEREDITO FINAL
-APROVADO ou REPROVADO para placa preta
-
-────────────────────────────────────────
-
-💰 ANÁLISE DE MERCADO
-- venda rápida
-- mercado particular
-- pós certificação
-
-────────────────────────────────────────
-
-🧠 RECOMENDAÇÕES
-- melhorias técnicas
-- peças originais
-- ajustes para aprovação futura
-
-────────────────────────────────────────
-
-✍️ ASSINATURA
-"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
 """
 
 
@@ -194,7 +109,7 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📥 AVALIAÇÃO (AGORA CORRETO - 10 FOTOS DINÂMICAS)
+# 📥 AVALIAÇÃO (AGORA NOMINADO)
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -204,7 +119,16 @@ async def avaliacao(
     modelo: Optional[str] = Form(None),
     ano: Optional[str] = Form(None),
 
-    fotos_upload: List[UploadFile] = File(...)
+    frente_veiculo: Optional[UploadFile] = File(None),
+    traseira: Optional[UploadFile] = File(None),
+    lateral_direita: Optional[UploadFile] = File(None),
+    lateral_esquerda: Optional[UploadFile] = File(None),
+    interior: Optional[UploadFile] = File(None),
+    painel: Optional[UploadFile] = File(None),
+    motor: Optional[UploadFile] = File(None),
+    porta_malas: Optional[UploadFile] = File(None),
+    chassi: Optional[UploadFile] = File(None),
+    foto_adicional: Optional[UploadFile] = File(None),
 ):
 
     cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
@@ -228,29 +152,19 @@ async def avaliacao(
         "url": url_publica
     }
 
-    nomes = [
-        "frente",
-        "traseira",
-        "lat1",
-        "lat2",
-        "interior",
-        "painel",
-        "motor",
-        "extra1",
-        "extra2",
-        "extra3",
-    ]
-
-    fotos = {}
-
-    for i, file in enumerate(fotos_upload):
-        if i >= len(nomes):
-            break
-
-        nome = nomes[i]
-        path = f"{pasta}/{nome}.jpg"
-
-        fotos[nome] = salvar_imagem(file, path)
+    # 📸 SALVAMENTO NOMINADO (SÓ ISSO FOI MUDADO)
+    fotos = {
+        "frente_veiculo": salvar_imagem(frente_veiculo, f"{pasta}/frente_veiculo.jpg"),
+        "traseira": salvar_imagem(traseira, f"{pasta}/traseira.jpg"),
+        "lateral_direita": salvar_imagem(lateral_direita, f"{pasta}/lateral_direita.jpg"),
+        "lateral_esquerda": salvar_imagem(lateral_esquerda, f"{pasta}/lateral_esquerda.jpg"),
+        "interior": salvar_imagem(interior, f"{pasta}/interior.jpg"),
+        "painel": salvar_imagem(painel, f"{pasta}/painel.jpg"),
+        "motor": salvar_imagem(motor, f"{pasta}/motor.jpg"),
+        "porta_malas": salvar_imagem(porta_malas, f"{pasta}/porta_malas.jpg"),
+        "chassi": salvar_imagem(chassi, f"{pasta}/chassi.jpg"),
+        "foto_adicional": salvar_imagem(foto_adicional, f"{pasta}/foto_adicional.jpg"),
+    }
 
     try:
         relatorio = gerar_relatorio(fotos, dados["veiculo"])
@@ -264,7 +178,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD (INALTERADO)
+# 📊 DASHBOARD (SEM MUDANÇA)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
 
@@ -307,7 +221,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (5x2 GRID CORRIGIDO)
+# 👤 CLIENTE (SEM MUDANÇA)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -319,19 +233,17 @@ def cliente(id: str):
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
-    fotos_dir = os.path.join(UPLOAD_DIR, id)
-
     fotos = [
-        f"/uploads/{id}/frente.jpg",
+        f"/uploads/{id}/frente_veiculo.jpg",
         f"/uploads/{id}/traseira.jpg",
-        f"/uploads/{id}/lat1.jpg",
-        f"/uploads/{id}/lat2.jpg",
+        f"/uploads/{id}/lateral_direita.jpg",
+        f"/uploads/{id}/lateral_esquerda.jpg",
         f"/uploads/{id}/interior.jpg",
         f"/uploads/{id}/painel.jpg",
         f"/uploads/{id}/motor.jpg",
-        f"/uploads/{id}/extra1.jpg",
-        f"/uploads/{id}/extra2.jpg",
-        f"/uploads/{id}/extra3.jpg",
+        f"/uploads/{id}/porta_malas.jpg",
+        f"/uploads/{id}/chassi.jpg",
+        f"/uploads/{id}/foto_adicional.jpg",
     ]
 
     html = f"""
