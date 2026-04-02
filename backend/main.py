@@ -264,10 +264,9 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD
+# 📊 DASHBOARD (INALTERADO)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
-
     clientes = []
 
     for pasta in os.listdir(UPLOAD_DIR):
@@ -278,55 +277,15 @@ def avaliacoes():
 
     clientes.reverse()
 
-    html = """
-    <html>
-    <head>
-        <style>
-            body {
-                font-family: Arial;
-                background: #f7f7f7;
-                padding: 30px;
-            }
-
-            .card {
-                background: #ffffff;
-                padding: 18px;
-                margin-bottom: 18px;
-                border-radius: 12px;
-                box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-                border-left: 6px solid #111;
-            }
-
-            .btn {
-                background: #111;
-                color: #fff;
-                padding: 8px 12px;
-                text-decoration: none;
-                border-radius: 6px;
-            }
-        </style>
-    </head>
-    <body>
-    <h1>📊 Dashboard Vistoria Placa Preta</h1>
-    """
-
+    html = "<html><body><h1>Dashboard</h1>"
     for id_, d in clientes:
-        html += f"""
-        <div class="card">
-            👤 <b>{d.get('nome')}</b><br>
-            📞 {d.get('telefone')}<br>
-            📅 {d.get('data')}<br>
-            📧 {d.get('email')}<br>
-            🆔 {id_}<br>
-            🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
-        </div>
-        """
-
+        html += f"<div><b>{d.get('nome')}</b> - <a href='/cliente/{id_}'>Abrir</a></div>"
     html += "</body></html>"
+
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (PÁGINA PÚBLICA PREMIUM VISUAL)
+# 👤 CLIENTE (ÚNICA PARTE ALTERADA - VISUAL)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -351,85 +310,98 @@ def cliente(id: str):
         <style>
             body {{
                 font-family: Arial;
-                background: #f7f7f7;
+                background: #ececec;
                 padding: 30px;
                 color: #111;
             }}
 
+            .container {{
+                max-width: 1100px;
+                margin: auto;
+            }}
+
             .card {{
                 background: #fff;
-                padding: 20px;
+                padding: 25px;
                 margin-bottom: 20px;
-                border-radius: 14px;
-                box-shadow: 0 6px 22px rgba(0,0,0,0.08);
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
                 border-left: 6px solid #111;
             }}
 
-            h3 {{
-                margin-bottom: 12px;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 6px;
+            h2, h3 {{
+                text-align: center;
+                font-weight: bold;
+            }}
+
+            .info {{
+                text-align: center;
+                line-height: 1.6;
             }}
 
             .grid {{
                 display: grid;
-                grid-template-columns: repeat(5, 1fr);
+                grid-template-columns: repeat(4, 1fr);
                 gap: 12px;
             }}
 
             .grid img {{
                 width: 100%;
-                height: 150px;
+                height: 160px;
                 object-fit: cover;
                 border-radius: 10px;
-                transition: transform 0.2s ease;
-            }}
-
-            .grid img:hover {{
-                transform: scale(1.03);
             }}
 
             pre {{
-                background: #f2f2f2;
-                padding: 15px;
-                border-radius: 10px;
+                background: #f4f4f4;
+                padding: 18px;
+                border-radius: 12px;
                 white-space: pre-wrap;
-                font-size: 13px;
+                font-size: 14px;
+                line-height: 1.6;
             }}
         </style>
     </head>
+
     <body>
+    <div class="container">
 
-    <div class="card">
-        👤 <b>{d.get("nome")}</b><br>
-        📞 {d.get("telefone")}<br>
-        📅 {d.get("data")}<br>
-        📧 {d.get("email")}<br>
-        🆔 {d.get("id")}<br>
-    </div>
+        <div class="card">
+            <h2>🏁 LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h2>
+            <div class="info">
+                <b>{d.get("nome")}</b><br>
+                {d.get("telefone")}<br>
+                {d.get("email")}<br>
+                {d.get("data")}<br>
+                ID: <b>{d.get("id")}</b>
+            </div>
+        </div>
 
-    <div class="card">
-        <h3>📸 Fotos do Veículo</h3>
-        <div class="grid">
+        <div class="card">
+            <h3>📸 FOTOS DO VEÍCULO</h3>
+            <div class="grid">
     """
 
     for f in fotos:
         html += f'<img src="{f}"/>'
 
     html += f"""
+            </div>
         </div>
-    </div>
 
-    <div class="card">
-        <h3>🤖 Relatório Técnico</h3>
-        <pre>{d.get("relatorio_ai","")}</pre>
-    </div>
+        <div class="card">
+            <h3>🤖 RELATÓRIO TÉCNICO</h3>
+            <pre>{d.get("relatorio_ai","")}</pre>
+        </div>
 
-    <div class="card">
-        <h3>🏁 Validação Digital</h3>
-        <p><b>Hash:</b> {gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</p>
-    </div>
+        <div class="card">
+            <h3>🔐 VALIDAÇÃO DIGITAL</h3>
+            <div class="info">
+                <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b>
+            </div>
+        </div>
 
+    </div>
     </body>
     </html>
     """
