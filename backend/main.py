@@ -61,7 +61,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT (NÃO ALTERADO)
+# 🧠 PROMPT (ABSOLUTAMENTE INTACTO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -344,7 +344,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD (INALTERADO)
+# 📊 DASHBOARD (🔥 ÚNICA PARTE ALTERADA)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
     clientes = []
@@ -357,15 +357,93 @@ def avaliacoes():
 
     clientes.reverse()
 
-    html = "<html><body><h1>Dashboard</h1>"
+    html = """
+    <html>
+    <head>
+        <style>
+            body {
+                font-family: Arial;
+                background: #f2f2f2;
+                padding: 20px;
+            }
+
+            h1 {
+                margin-bottom: 20px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 16px;
+            }
+
+            .card {
+                background: #fff;
+                border-radius: 14px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            }
+
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 6px;
+            }
+
+            .info {
+                font-size: 13px;
+                margin: 3px 0;
+                color: #333;
+            }
+
+            .btn {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 10px 12px;
+                background: #111;
+                color: #fff;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 13px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>Dashboard</h1>
+
+        <div class="grid">
+    """
+
+    # 🔥 SOMENTE O LOOP FOI MELHORADO
     for id_, d in clientes:
-        html += f"<div><b>{d.get('nome')}</b> - <a href='/cliente/{id_}'>Abrir</a></div>"
-    html += "</body></html>"
+        veiculo = d.get("veiculo", {})
+
+        html += f"""
+        <div class="card">
+            <div class="title">{d.get('nome')}</div>
+
+            <div class="info">🚗 {veiculo.get('marca')} {veiculo.get('modelo')} ({veiculo.get('ano')})</div>
+            <div class="info">📅 {d.get('data')}</div>
+            <div class="info">📧 {d.get('email')}</div>
+            <div class="info">📞 {d.get('telefone')}</div>
+
+            <a class="btn" href="/cliente/{id_}">
+                Abrir laudo completo →
+            </a>
+        </div>
+        """
+
+    html += """
+        </div>
+    </body>
+    </html>
+    """
 
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (ÚNICA PARTE ALTERADA - VISUAL)
+# 👤 CLIENTE (INALTERADO)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
