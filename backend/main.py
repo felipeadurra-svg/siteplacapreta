@@ -16,6 +16,8 @@ app = FastAPI()
 # 🔑 OPENAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+MODEL = "gpt-4o"  # 🔥 VISÃO REAL FORTE (NÃO MINI)
+
 # 🌍 CORS
 app.add_middleware(
     CORSMiddleware,
@@ -54,7 +56,37 @@ def img_to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🚀 GERAR RELATÓRIO PROFISSIONAL (1 CHAMADA SÓ)
+# 🚨 PROMPT ULTRA RÍGIDO (ANTI-GENERICIDADE)
+VISION_PROMPT = """
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA REAL.
+
+Você está analisando UMA FOTO DO VEÍCULO.
+
+REGRAS OBRIGATÓRIAS:
+- descreva SOMENTE o que está visível na imagem
+- NÃO invente nada
+- NÃO seja genérico
+- NÃO use frases como "parece estar em bom estado"
+- seja específico e técnico
+- cite detalhes visuais concretos
+
+Você deve identificar:
+
+✔ pintura (brilho, desgaste, riscos)
+✔ lataria (amassados, ondulações)
+✔ ferrugem (se visível)
+✔ alinhamento de peças
+✔ estado de conservação real
+✔ danos visuais explícitos
+
+Se algo NÃO for visível:
+→ escreva "não visível nesta imagem"
+
+Agora faça uma análise técnica REAL desta imagem.
+"""
+
+
+# 🚀 IA VISÃO REAL (ROBUSTA)
 def gerar_relatorio_real(fotos, dados_veiculo):
 
     imagens = []
@@ -75,45 +107,35 @@ def gerar_relatorio_real(fotos, dados_veiculo):
         })
 
     prompt = f"""
-Você é um PERITO AUTOMOTIVO PROFISSIONAL nível seguradora.
-
-Você está analisando um veículo com as seguintes informações:
-
+VEÍCULO EM ANÁLISE:
 - Marca: {dados_veiculo.get("marca")}
 - Modelo: {dados_veiculo.get("modelo")}
 - Ano: {dados_veiculo.get("ano")}
 
-REGRAS OBRIGATÓRIAS:
-- analise TODAS as imagens com atenção
-- NÃO invente informações
-- NÃO use frases genéricas
-- baseie-se SOMENTE no que estiver visível
-- seja técnico, preciso e objetivo
-- identifique danos reais quando existirem
+Agora você receberá várias imagens do veículo.
 
-AVALIAÇÃO OBRIGATÓRIA:
-- pintura
-- lataria
-- interior
-- motor
-- rodas/pneus
-- sinais de desgaste ou colisão
+IMPORTANTE:
+- Analise TODAS as imagens
+- Cada imagem representa uma visão diferente do veículo
+- Seja extremamente técnico
+- NÃO resuma sem analisar
+- NÃO gere texto genérico
+
+FORMATO FINAL:
+
+1. Resumo técnico geral
+2. Análise detalhada por imagem (IMPORTANTE)
+3. Exterior (pintura e lataria)
+4. Interior
+5. Estrutura e integridade
+6. Conclusão final
 
 CLASSIFICAÇÃO FINAL:
-EXCELENTE / BOM / REGULAR / RUIM
-
-FORMATO DO RELATÓRIO:
-
-1. Resumo geral
-2. Exterior (lataria e pintura)
-3. Interior
-4. Motor e mecânica
-5. Estrutura e integridade
-6. Conclusão técnica final
+RUIM / REGULAR / BOM / ÓTIMO
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=MODEL,
         messages=[
             {
                 "role": "user",
@@ -129,7 +151,7 @@ FORMATO DO RELATÓRIO:
     return response.choices[0].message.content
 
 
-# 📥 RECEBER AVALIAÇÃO
+# 📥 ENDPOINT PRINCIPAL
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -194,7 +216,7 @@ async def avaliacao(
 
     dados["fotos"] = fotos
 
-    # 🔥 IA VISÃO REAL (1 REQUEST SÓ)
+    # 🔥 IA VISÃO REAL
     try:
         relatorio = gerar_relatorio_real(fotos, dados["veiculo"])
         dados["relatorio_ai"] = relatorio
@@ -248,7 +270,7 @@ def avaliacoes():
         </style>
     </head>
     <body>
-        <h1>📊 Vistorias com IA Vision</h1>
+        <h1>📊 Vistorias com IA Vision REAL</h1>
     """
 
     for c in clientes:
@@ -297,7 +319,7 @@ def cliente(cliente_id: str):
     for f in fotos:
         html += f'<img src="{f}" width="200" style="margin:5px"/>'
 
-    html += "<h3>🤖 Relatório IA Vision</h3>"
+    html += "<h3>🤖 Relatório IA Vision REAL</h3>"
     html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
 
     html += "</body></html>"
