@@ -10,6 +10,7 @@ import os
 import uuid
 import json
 import base64
+import hashlib
 
 app = FastAPI()
 
@@ -54,7 +55,13 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🤖 IA VISTORIA NÍVEL PERITO
+# 🔐 hash simples (assinatura digital simulada)
+def gerar_hash(nome, data, nota):
+    raw = f"{nome}-{data}-{nota}".encode()
+    return hashlib.md5(raw).hexdigest()
+
+
+# 🤖 IA VISTORIA PROFISSIONAL
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -75,108 +82,110 @@ def gerar_relatorio(fotos, dados):
         })
 
     prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS E ANTIGOS.
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS PARA PLACA PRETA.
 
 ---
 
-## DADOS DO FORMULÁRIO
-Marca informada: {dados.get("marca")}
-Modelo informado: {dados.get("modelo")}
-Ano informado: {dados.get("ano")}
+# 🔎 IDENTIFICAÇÃO DO VEÍCULO
+
+Determine:
+- Marca
+- Modelo
+- Ano exato ou estimado
+- Geração
+- Confiança (%)
+
+Se não tiver certeza do ano:
+→ "ANO INCONCLUSIVO"
 
 ---
 
-## ETAPA 1 — IDENTIFICAÇÃO DO VEÍCULO
+# 🕰️ REGRA PLACA PRETA (OBRIGATÓRIA)
 
-Analise as imagens e determine:
+O veículo deve ter:
+IDADE ≥ 30 ANOS
 
-- Marca provável
-- Modelo provável
-- Ano aproximado ou geração
-- País de origem
-- Nível de confiança (%)
-
-Se não tiver certeza:
-- declare IDENTIFICAÇÃO INCONCLUSIVA
-- explique o motivo
+Se não tiver:
+→ REPROVADO AUTOMÁTICO
 
 ---
 
-## ETAPA 2 — REFERÊNCIA ORIGINAL DE FÁBRICA
+# 🏭 ORIGINAL DE FÁBRICA
 
-Descreva como o veículo ORIGINAL deveria ser:
-
-- motor original esperado
-- interior original
-- painel original
-- rodas originais
-- lanternas/faróis originais
-- acabamento de fábrica
-
-Se não identificar o modelo:
-→ use referência genérica de veículo clássico similar
+Descreva como o carro era original:
+- motor
+- interior
+- painel
+- rodas
+- lanternas
+- acabamento
 
 ---
 
-## ETAPA 3 — ANÁLISE DAS IMAGENS
+# 📸 ANÁLISE DAS IMAGENS
 
-Analise cada imagem:
-
-📸 Imagem 1:
-📸 Imagem 2:
-📸 Imagem 3:
-...
-
-Para cada:
-- descrição técnica
-- estado de conservação
-- alterações visíveis
-- observações relevantes
+Analise cada foto individualmente.
 
 ---
 
-## ETAPA 4 — ORIGINALIDADE REAL (%)
+# ⚖️ ORIGINALIDADE (%)
 
-Compare com padrão original e avalie:
-
-- % originalidade geral
-- peças não originais
-- sinais de restauração
-- sinais de modificação
+Calcule:
+- peças originais
+- modificações
+- restauração
 
 ---
 
-## ETAPA 5 — AVALIAÇÃO TÉCNICA (0–100)
+# 📊 NOTA OBRIGATÓRIA (0–100)
 
-- Originalidade
-- Lataria/Pintura
-- Interior
-- Motor
-- Estrutura
-- Conservação geral
+Peso:
+- Originalidade 40%
+- Conservação 20%
+- Motor 15%
+- Interior 15%
+- Estrutura 10%
 
----
-
-## ETAPA 6 — NOTA FINAL
-
-Explique tecnicamente a nota final.
+MOSTRAR DETALHAMENTO COMPLETO
 
 ---
 
-## ETAPA 7 — STATUS PLACA PRETA
+# 🧮 DECISÃO FINAL
 
-- APROVADO / REPROVADO / EM ANÁLISE
-- justificativa técnica
+Se idade ≥ 30:
+- ≥ 80 → APROVADO
+- < 80 → REPROVADO
+
+Se idade < 30:
+→ REPROVADO
 
 ---
 
-## ETAPA 8 — VALOR DE MERCADO
+# 🏁 SELO OFICIAL
 
-Estimativa baseada em:
-- modelo identificado
+Exibir:
+🏁 PLACA PRETA: APROVADO ou REPROVADO
+
+Assinatura:
+"Perito IA Automotivo v2.0"
+
+---
+
+# 💰 VALOR DE MERCADO
+
+Baseado em:
+- modelo
 - originalidade
-- conservação
-- raridade
+- estado
+
+---
+
+# 📌 RECOMENDAÇÕES (SE REPROVADO)
+
+Liste melhorias práticas:
+- peças originais
+- restaurações necessárias
+- ajustes estéticos
 """
 
     response = client.chat.completions.create(
@@ -243,7 +252,8 @@ async def avaliacao(
     }
 
     try:
-        dados["relatorio_ai"] = gerar_relatorio(fotos, dados["veiculo"])
+        relatorio = gerar_relatorio(fotos, dados["veiculo"])
+        dados["relatorio_ai"] = relatorio
     except Exception as e:
         dados["relatorio_ai"] = str(e)
 
@@ -277,7 +287,7 @@ def avaliacoes():
         </style>
     </head>
     <body>
-    <h1>📊 Dashboard</h1>
+    <h1>📊 Dashboard Vistoria Placa Preta</h1>
     """
 
     for id_, d in clientes:
@@ -373,17 +383,22 @@ def cliente(id: str):
     for f in fotos:
         html += f'<img src="{f}"/>'
 
-    html += """
+    html += f"""
         </div>
     </div>
 
     <div class="card">
         <h3>🤖 Relatório Técnico</h3>
-        <pre>{}</pre>
+        <pre>{d.get("relatorio_ai","")}</pre>
+    </div>
+
+    <div class="card">
+        <h3>🏁 Validação</h3>
+        <p>Assinatura digital: <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b></p>
     </div>
 
     </body>
     </html>
-    """.format(d.get("relatorio_ai", ""))
+    """
 
     return HTMLResponse(html)
