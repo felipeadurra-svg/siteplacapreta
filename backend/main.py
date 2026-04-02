@@ -15,7 +15,6 @@ app = FastAPI()
 
 # 🔑 OPENAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 MODEL = "gpt-4o"
 
 # 🌍 CORS
@@ -38,6 +37,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def salvar_imagem(file: UploadFile, caminho: str):
     if not file:
         return None
+
     content = file.file.read()
     if not content:
         return None
@@ -52,16 +52,17 @@ def salvar_imagem(file: UploadFile, caminho: str):
 def img_to_base64(path):
     if not path or not os.path.exists(path):
         return None
+
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🚀 RELATÓRIO NÍVEL VISTORIA REAL
+# 🚀 RELATÓRIO IA NÍVEL VISTORIA
 def gerar_relatorio_real(fotos, dados_veiculo):
 
     imagens = []
 
-    for nome, path in fotos.items():
+    for _, path in fotos.items():
         if not path:
             continue
 
@@ -77,77 +78,45 @@ def gerar_relatorio_real(fotos, dados_veiculo):
         })
 
     prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALIZADO EM VEÍCULOS ANTIGOS, atuando com padrão técnico de vistoria para certificação de originalidade e conservação (placa preta).
+Você é um PERITO AUTOMOTIVO ESPECIALIZADO EM VEÍCULOS ANTIGOS, com padrão técnico de vistoria para certificação de originalidade (placa preta).
 
 DADOS DO VEÍCULO:
 - Marca: {dados_veiculo.get("marca")}
 - Modelo: {dados_veiculo.get("modelo")}
 - Ano: {dados_veiculo.get("ano")}
 
-REGRAS OBRIGATÓRIAS:
-- Analise SOMENTE o que estiver visível nas imagens
-- NÃO invente informações
+REGRAS:
+- Analise SOMENTE o que estiver visível
+- NÃO invente
 - NÃO use linguagem genérica
-- NÃO use termos vagos como "parece bom"
-- Seja técnico, objetivo e direto
-- Quando algo não for visível: escreva "não visível nas imagens"
-- Aponte inconsistências entre fotos se existirem
+- Seja técnico e direto
+- Se não for visível: "não visível nas imagens"
 
----
+CRITÉRIOS (0 a 100):
+1. Originalidade
+2. Lataria e pintura
+3. Interior
+4. Motor
+5. Estrutura
+6. Conservação geral
 
-CRITÉRIOS (NOTA 0 A 100):
+Para cada item:
+- descrição técnica
+- nota (0 a 100)
 
-1. ORIGINALIDADE
-2. LATARIA E PINTURA
-3. INTERIOR
-4. MOTOR E COMPONENTES VISÍVEIS
-5. ESTRUTURA
-6. CONSERVAÇÃO GERAL
+Faça também:
+- análise por imagem
+- média final
+- dizer se é APTO ou NÃO APTO para placa preta (mínimo 80)
+- estimar valor de mercado em reais
 
----
-
-PARA CADA ITEM:
-- Descrever tecnicamente o que está visível
-- Dar nota de 0 a 100
-
----
-
-ANÁLISE POR IMAGEM:
-- Descrever objetivamente cada imagem
-- Identificar defeitos visuais reais (riscos, desalinhamento, desgaste, etc)
-
----
-
-CÁLCULO FINAL:
-- Calcular média das notas
-- Gerar NOTA FINAL (0 a 100)
-
----
-
-PLACA PRETA:
-- Mínimo aceitável: 80 pontos
-- Informar: APTO ou NÃO APTO
-- Justificar tecnicamente
-
----
-
-AVALIAÇÃO DE MERCADO:
-- Estimar valor em reais (R$)
-- Baseado no estado visual
-- Considerar mercado brasileiro de clássicos
-
----
-
-FORMATO FINAL:
-
-1. Resumo técnico geral  
-2. Análise por imagem  
-3. Avaliação por critérios (com notas)  
-4. Nota final  
-5. Status placa preta (APTO / NÃO APTO)  
-6. Avaliação de mercado  
-
-Gere um relatório técnico de vistoria, objetivo, detalhado e profissional.
+FORMATO:
+1. Resumo técnico
+2. Análise por imagem
+3. Critérios com notas
+4. Nota final
+5. Status placa preta
+6. Valor de mercado
 """
 
     response = client.chat.completions.create(
@@ -167,7 +136,7 @@ Gere um relatório técnico de vistoria, objetivo, detalhado e profissional.
     return response.choices[0].message.content
 
 
-# 📥 ENDPOINT
+# 📥 RECEBER AVALIAÇÃO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -186,30 +155,36 @@ async def avaliacao(
     foto_motor: Optional[UploadFile] = File(None),
 ):
 
-    nome_limpo = (nome or "cliente").strip().replace(" ", "_")
-    telefone_limpo = (telefone or "sem_numero").strip().replace(" ", "")
+    nome_limpo = (nome or "cliente").replace(" ", "_")
+    telefone_limpo = (telefone or "sem_numero").replace(" ", "")
 
     cliente_id = f"{nome_limpo}_{telefone_limpo}_{uuid.uuid4().hex[:6]}"
 
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
+    data_brasil = datetime.now(
+        ZoneInfo("America/Sao_Paulo")
+    ).strftime("%d/%m/%Y %H:%M")
+
     dados = {
+        "id": cliente_id,
         "nome": nome,
+        "email": email,
         "telefone": telefone,
         "veiculo": {
             "marca": marca,
             "modelo": modelo,
             "ano": ano
         },
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+        "data": data_brasil
     }
 
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral1.jpg"),
-        "lateral_esquerda": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral2.jpg"),
+        "lateral1": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral1.jpg"),
+        "lateral2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral2.jpg"),
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
@@ -226,32 +201,137 @@ async def avaliacao(
     return {"status": "ok", "cliente_id": cliente_id}
 
 
+# 🏠 ROOT
+@app.get("/")
+def root():
+    return {"status": "backend funcionando 🚀"}
+
+
 # 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
-    html = "<h1>📊 Avaliações</h1>"
 
-    for pasta in os.listdir(UPLOAD_DIR):
-        html += f'<div><a href="/cliente/{pasta}">{pasta}</a></div>'
+    clientes = []
 
-    return HTMLResponse(html)
+    for pasta_cliente in os.listdir(UPLOAD_DIR):
+        pasta_path = os.path.join(UPLOAD_DIR, pasta_cliente)
+
+        if not os.path.isdir(pasta_path):
+            continue
+
+        json_path = os.path.join(pasta_path, "dados.json")
+
+        if not os.path.exists(json_path):
+            continue
+
+        with open(json_path, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        clientes.append({
+            "id": pasta_cliente,
+            "dados": dados
+        })
+
+    clientes.sort(key=lambda c: c["dados"].get("data", ""), reverse=True)
+
+    html = """
+    <html>
+    <head>
+        <title>Avaliações</title>
+        <style>
+            body { font-family: Arial; background:#f4f4f4; padding:20px; }
+            .card { background:white; padding:15px; margin-bottom:15px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+            .linha { display:flex; justify-content:space-between; align-items:center; }
+            .btn { padding:8px 12px; background:black; color:white; text-decoration:none; border-radius:6px; }
+        </style>
+    </head>
+    <body>
+        <h1>📊 Avaliações Recebidas</h1>
+    """
+
+    for c in clientes:
+        d = c["dados"]
+
+        html += f"""
+        <div class="card">
+            <div class="linha">
+                <div>
+                    <b>👤 {d.get('nome','')}</b><br>
+                    📞 {d.get('telefone','')}<br>
+                    ✉️ {d.get('email','')}<br>
+                    📅 {d.get('data','')}
+                </div>
+
+                <a class="btn" href="/cliente/{c['id']}">
+                    Ver relatório
+                </a>
+            </div>
+        </div>
+        """
+
+    html += "</body></html>"
+
+    return HTMLResponse(content=html)
 
 
 # 👤 CLIENTE
 @app.get("/cliente/{cliente_id}", response_class=HTMLResponse)
 def cliente(cliente_id: str):
 
-    path = f"{UPLOAD_DIR}/{cliente_id}/dados.json"
+    pasta = os.path.join(UPLOAD_DIR, cliente_id)
+    json_path = os.path.join(pasta, "dados.json")
 
-    if not os.path.exists(path):
-        return HTMLResponse("Não encontrado")
+    if not os.path.exists(json_path):
+        return HTMLResponse("<h1>Cliente não encontrado</h1>")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(json_path, "r", encoding="utf-8") as f:
         dados = json.load(f)
 
+    fotos = [
+        f"/uploads/{cliente_id}/{f}"
+        for f in os.listdir(pasta)
+        if f.endswith(".jpg")
+    ]
+
     html = f"""
-    <h2>{dados.get("nome")}</h2>
-    <pre>{dados.get("relatorio_ai")}</pre>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
+            .card {{ background:white; padding:20px; border-radius:10px; margin-bottom:20px; }}
+            img {{ width:180px; margin:5px; border-radius:8px; }}
+            pre {{ white-space: pre-wrap; }}
+            .btn {{ padding:8px 12px; background:black; color:white; text-decoration:none; border-radius:6px; }}
+        </style>
+    </head>
+    <body>
+
+    <a class="btn" href="/avaliacoes">⬅ Voltar</a>
+
+    <div class="card">
+        <h2>{dados.get("nome")}</h2>
+        <p>📞 {dados.get("telefone")}</p>
+        <p>✉️ {dados.get("email")}</p>
+        <p>📅 {dados.get("data")}</p>
+    </div>
+
+    <div class="card">
+        <h3>📸 Fotos</h3>
     """
 
-    return HTMLResponse(html)
+    for f in fotos:
+        html += f'<img src="{f}"/>'
+
+    html += f"""
+    </div>
+
+    <div class="card">
+        <h3>🤖 Relatório</h3>
+        <pre>{dados.get("relatorio_ai","")}</pre>
+    </div>
+
+    </body>
+    </html>
+    """
+
+    return HTMLResponse(content=html)
