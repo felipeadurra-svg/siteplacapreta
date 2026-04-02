@@ -219,7 +219,6 @@ async def avaliacao(
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
 
-    # ✅ NOVAS FOTOS ADICIONADAS
     foto_porta_malas: Optional[UploadFile] = File(None),
     foto_chassi: Optional[UploadFile] = File(None),
     foto_adicional: Optional[UploadFile] = File(None),
@@ -254,8 +253,6 @@ async def avaliacao(
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
-
-        # ✅ NOVAS FOTOS
         "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
         "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
@@ -343,7 +340,9 @@ def cliente(id: str):
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
             .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
-            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+
+            .grid {{ display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }}
+
             .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
         </style>
