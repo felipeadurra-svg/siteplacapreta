@@ -55,10 +55,112 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🔐 hash simples (assinatura digital simulada)
+# 🔐 hash simples
 def gerar_hash(nome, data, nota):
     raw = f"{nome}-{data}-{nota}".encode()
     return hashlib.md5(raw).hexdigest()
+
+
+# 🧠 PROMPT NOVO (BASEADO NO SEU RELATÓRIO REAL)
+def gerar_prompt():
+    return """
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+
+⚠️ REGRAS CRÍTICAS:
+- NÃO inventar peças não visíveis
+- NÃO usar fórmulas, pesos ou cálculos
+- NÃO mostrar lógica de pontuação
+- Linguagem técnica estilo clube de antigomobilismo
+- Base apenas em evidência visual
+
+────────────────────────────────────────
+
+📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise
+
+────────────────────────────────────────
+
+I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+Avaliar:
+- alinhamento de portas, capô e tampa
+- pintura (original / repintura / verniz moderno)
+- cromados e lanternas
+- rodas e pneus
+- sinais de restauração
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+Avaliar:
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- conservação geral
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+Avaliar:
+- organização do cofre
+- fiação aparente
+- componentes originais visíveis
+- suspensão e rodas (aspecto visual)
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+Avaliar:
+- estrutura
+- borrachas
+- desgaste natural
+
+📌 Subtotal: XX / 10
+
+────────────────────────────────────────
+
+📊 RESULTADO FINAL
+Carroceria / Interior / Mecânica / Conservação
+TOTAL: XX / 100
+
+────────────────────────────────────────
+
+🏁 VEREDITO FINAL
+APROVADO ou REPROVADO para placa preta
+
+────────────────────────────────────────
+
+💰 ANÁLISE DE MERCADO
+- venda rápida
+- mercado particular
+- pós certificação
+
+────────────────────────────────────────
+
+🧠 RECOMENDAÇÕES
+- melhorias técnicas
+- peças originais
+- ajustes para aprovação futura
+
+────────────────────────────────────────
+
+✍️ ASSINATURA
+"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
+"""
 
 
 # 🤖 IA VISTORIA PROFISSIONAL
@@ -81,112 +183,7 @@ def gerar_relatorio(fotos, dados):
             }
         })
 
-    prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS PARA PLACA PRETA.
-
----
-
-# 🔎 IDENTIFICAÇÃO DO VEÍCULO
-
-Determine:
-- Marca
-- Modelo
-- Ano exato ou estimado
-- Geração
-- Confiança (%)
-
-Se não tiver certeza do ano:
-→ "ANO INCONCLUSIVO"
-
----
-
-# 🕰️ REGRA PLACA PRETA (OBRIGATÓRIA)
-
-O veículo deve ter:
-IDADE ≥ 30 ANOS
-
-Se não tiver:
-→ REPROVADO AUTOMÁTICO
-
----
-
-# 🏭 ORIGINAL DE FÁBRICA
-
-Descreva como o carro era original:
-- motor
-- interior
-- painel
-- rodas
-- lanternas
-- acabamento
-
----
-
-# 📸 ANÁLISE DAS IMAGENS
-
-Analise cada foto individualmente.
-
----
-
-# ⚖️ ORIGINALIDADE (%)
-
-Calcule:
-- peças originais
-- modificações
-- restauração
-
----
-
-# 📊 NOTA OBRIGATÓRIA (0–100)
-
-Peso:
-- Originalidade 40%
-- Conservação 20%
-- Motor 15%
-- Interior 15%
-- Estrutura 10%
-
-MOSTRAR DETALHAMENTO COMPLETO
-
----
-
-# 🧮 DECISÃO FINAL
-
-Se idade ≥ 30:
-- ≥ 80 → APROVADO
-- < 80 → REPROVADO
-
-Se idade < 30:
-→ REPROVADO
-
----
-
-# 🏁 SELO OFICIAL
-
-Exibir:
-🏁 PLACA PRETA: APROVADO ou REPROVADO
-
-Assinatura:
-"Perito IA Automotivo v2.0"
-
----
-
-# 💰 VALOR DE MERCADO
-
-Baseado em:
-- modelo
-- originalidade
-- estado
-
----
-
-# 📌 RECOMENDAÇÕES (SE REPROVADO)
-
-Liste melhorias práticas:
-- peças originais
-- restaurações necessárias
-- ajustes estéticos
-"""
+    prompt = gerar_prompt()
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -329,40 +326,11 @@ def cliente(id: str):
     <head>
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
-
-            .card {{
-                background:#fff;
-                padding:15px;
-                margin-bottom:15px;
-                border-radius:10px;
-            }}
-
-            .grid {{
-                display:grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap:10px;
-            }}
-
-            .grid img {{
-                width:100%;
-                height:140px;
-                object-fit:cover;
-                border-radius:8px;
-            }}
-
-            pre {{
-                white-space:pre-wrap;
-            }}
-
-            .btn {{
-                background:#000;
-                color:#fff;
-                padding:8px 12px;
-                text-decoration:none;
-                border-radius:6px;
-                display:inline-block;
-                margin-bottom:10px;
-            }}
+            .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
+            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+            .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
+            pre {{ white-space:pre-wrap; }}
+            .btn {{ background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; display:inline-block; margin-bottom:10px; }}
         </style>
     </head>
     <body>
