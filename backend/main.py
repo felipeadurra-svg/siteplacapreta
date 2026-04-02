@@ -58,7 +58,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# ✅ PROMPT ORIGINAL (INTOCADO)
+# 🧠 PROMPT (ABSOLUTAMENTE INALTERADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -214,10 +214,10 @@ async def avaliacao(
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
 
-    # 🔧 ÚNICAS ADIÇÕES
-    foto_porta_malas: Optional[UploadFile] = File(None),
-    foto_chassi: Optional[UploadFile] = File(None),
-    foto_adicional: Optional[UploadFile] = File(None),
+    # ➕ 3 novos campos
+    foto_extra1: Optional[UploadFile] = File(None),
+    foto_extra2: Optional[UploadFile] = File(None),
+    foto_extra3: Optional[UploadFile] = File(None),
 ):
 
     cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
@@ -247,13 +247,13 @@ async def avaliacao(
         "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
         "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
+        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
 
-        # 🔧 ADIÇÕES SOMENTE AQUI
-        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
+        # extras
+        "extra1": salvar_imagem(foto_extra1, f"{pasta}/extra1.jpg"),
+        "extra2": salvar_imagem(foto_extra2, f"{pasta}/extra2.jpg"),
+        "extra3": salvar_imagem(foto_extra3, f"{pasta}/extra3.jpg"),
     }
 
     try:
@@ -283,21 +283,27 @@ def avaliacoes():
 
     html = """
     <html>
+    <head>
+        <style>
+            body { font-family: Arial; background:#f4f4f4; padding:20px; }
+            .card { background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }
+            .btn { background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; }
+        </style>
+    </head>
     <body>
     <h1>📊 Dashboard Vistoria Placa Preta</h1>
     """
 
     for id_, d in clientes:
         html += f"""
-        <div>
-            👤 {d.get('nome')}<br>
+        <div class="card">
+            👤 <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br>
             📧 {d.get('email')}<br>
             🆔 {id_}<br>
-            <a href="/cliente/{id_}" target="_blank">Abrir relatório</a>
+            🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
         </div>
-        <hr>
         """
 
     html += "</body></html>"
@@ -324,24 +330,59 @@ def cliente(id: str):
 
     html = f"""
     <html>
+    <head>
+        <style>
+            body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
+            .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
+
+            /* ALTERAÇÃO SOLICITADA */
+            .grid {{
+                display:grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap:10px;
+            }}
+
+            .grid img {{
+                width:100%;
+                height:140px;
+                object-fit:cover;
+                border-radius:8px;
+            }}
+
+            pre {{ white-space:pre-wrap; }}
+        </style>
+    </head>
     <body>
 
-    <h2>{d.get("nome")}</h2>
+    <div class="card">
+        👤 <b>{d.get("nome")}</b><br>
+        📞 {d.get("telefone")}<br>
+        📅 {d.get("data")}<br>
+        📧 {d.get("email")}<br>
+        🆔 {d.get("id")}<br>
+    </div>
 
-    <p>{d.get("email")}</p>
-    <p>{d.get("telefone")}</p>
-    <p>{d.get("data")}</p>
-
-    <h3>Fotos</h3>
+    <div class="card">
+        <h3>📸 Fotos</h3>
+        <div class="grid">
     """
 
     for f in fotos:
-        html += f'<img src="{f}" width="200"/>'
+        html += f'<img src="{f}"/>'
 
     html += f"""
+        </div>
+    </div>
 
-    <h3>Relatório</h3>
-    <pre>{d.get("relatorio_ai","")}</pre>
+    <div class="card">
+        <h3>🤖 Relatório Técnico</h3>
+        <pre>{d.get("relatorio_ai","")}</pre>
+    </div>
+
+    <div class="card">
+        <h3>🏁 Validação</h3>
+        <p>Assinatura digital: <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b></p>
+    </div>
 
     </body>
     </html>
