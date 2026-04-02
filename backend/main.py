@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from openai import OpenAI
@@ -58,7 +58,6 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT (ABSOLUTAMENTE INALTERADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -178,15 +177,13 @@ def gerar_relatorio(fotos, dados):
             }
         })
 
-    prompt = gerar_prompt()
-
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt},
+                    {"type": "text", "text": gerar_prompt()},
                     *imgs
                 ]
             }
@@ -197,6 +194,7 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
+# 📥 AVALIAÇÃO (AGORA CORRETO - 10 FOTOS DINÂMICAS)
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -206,18 +204,7 @@ async def avaliacao(
     modelo: Optional[str] = Form(None),
     ano: Optional[str] = Form(None),
 
-    foto_frente: Optional[UploadFile] = File(None),
-    foto_traseira: Optional[UploadFile] = File(None),
-    foto_lateral_direita: Optional[UploadFile] = File(None),
-    foto_lateral_esquerda: Optional[UploadFile] = File(None),
-    foto_interior: Optional[UploadFile] = File(None),
-    foto_painel: Optional[UploadFile] = File(None),
-    foto_motor: Optional[UploadFile] = File(None),
-
-    # ➕ 3 novos campos
-    foto_extra1: Optional[UploadFile] = File(None),
-    foto_extra2: Optional[UploadFile] = File(None),
-    foto_extra3: Optional[UploadFile] = File(None),
+    fotos_upload: List[UploadFile] = File(...)
 ):
 
     cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
@@ -241,20 +228,29 @@ async def avaliacao(
         "url": url_publica
     }
 
-    fotos = {
-        "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
-        "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
-        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
-        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
-        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
+    nomes = [
+        "frente",
+        "traseira",
+        "lat1",
+        "lat2",
+        "interior",
+        "painel",
+        "motor",
+        "extra1",
+        "extra2",
+        "extra3",
+    ]
 
-        # extras
-        "extra1": salvar_imagem(foto_extra1, f"{pasta}/extra1.jpg"),
-        "extra2": salvar_imagem(foto_extra2, f"{pasta}/extra2.jpg"),
-        "extra3": salvar_imagem(foto_extra3, f"{pasta}/extra3.jpg"),
-    }
+    fotos = {}
+
+    for i, file in enumerate(fotos_upload):
+        if i >= len(nomes):
+            break
+
+        nome = nomes[i]
+        path = f"{pasta}/{nome}.jpg"
+
+        fotos[nome] = salvar_imagem(file, path)
 
     try:
         relatorio = gerar_relatorio(fotos, dados["veiculo"])
@@ -268,6 +264,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
+# 📊 DASHBOARD (INALTERADO)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
 
@@ -310,6 +307,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
+# 👤 CLIENTE (5x2 GRID CORRIGIDO)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -322,10 +320,18 @@ def cliente(id: str):
         d = json.load(f)
 
     fotos_dir = os.path.join(UPLOAD_DIR, id)
+
     fotos = [
-        f"/uploads/{id}/{f}"
-        for f in os.listdir(fotos_dir)
-        if f.endswith(".jpg")
+        f"/uploads/{id}/frente.jpg",
+        f"/uploads/{id}/traseira.jpg",
+        f"/uploads/{id}/lat1.jpg",
+        f"/uploads/{id}/lat2.jpg",
+        f"/uploads/{id}/interior.jpg",
+        f"/uploads/{id}/painel.jpg",
+        f"/uploads/{id}/motor.jpg",
+        f"/uploads/{id}/extra1.jpg",
+        f"/uploads/{id}/extra2.jpg",
+        f"/uploads/{id}/extra3.jpg",
     ]
 
     html = f"""
@@ -335,7 +341,6 @@ def cliente(id: str):
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
             .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
 
-            /* ALTERAÇÃO SOLICITADA */
             .grid {{
                 display:grid;
                 grid-template-columns: repeat(5, 1fr);
