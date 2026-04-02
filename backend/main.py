@@ -54,7 +54,7 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🤖 IA VISÃO REAL
+# 🤖 IA VISTORIA NÍVEL PERITO
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -75,32 +75,79 @@ def gerar_relatorio(fotos, dados):
         })
 
     prompt = f"""
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS ANTIGOS.
-
-DADOS:
-Marca: {dados.get("marca")}
-Modelo: {dados.get("modelo")}
-Ano: {dados.get("ano")}
-
-REGRAS:
-- técnico e objetivo
-- analisar cada imagem separadamente
-- não inventar informações
-- se não visível: "não visível"
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA DE VEÍCULOS CLÁSSICOS E ANTIGOS.
 
 ---
 
-FORMATO OBRIGATÓRIO:
+## DADOS DO FORMULÁRIO
+Marca informada: {dados.get("marca")}
+Modelo informado: {dados.get("modelo")}
+Ano informado: {dados.get("ano")}
 
-🔎 RESUMO TÉCNICO
+---
 
-📸 ANÁLISE POR IMAGEM
-Imagem 1:
-Imagem 2:
-Imagem 3:
+## ETAPA 1 — IDENTIFICAÇÃO DO VEÍCULO
+
+Analise as imagens e determine:
+
+- Marca provável
+- Modelo provável
+- Ano aproximado ou geração
+- País de origem
+- Nível de confiança (%)
+
+Se não tiver certeza:
+- declare IDENTIFICAÇÃO INCONCLUSIVA
+- explique o motivo
+
+---
+
+## ETAPA 2 — REFERÊNCIA ORIGINAL DE FÁBRICA
+
+Descreva como o veículo ORIGINAL deveria ser:
+
+- motor original esperado
+- interior original
+- painel original
+- rodas originais
+- lanternas/faróis originais
+- acabamento de fábrica
+
+Se não identificar o modelo:
+→ use referência genérica de veículo clássico similar
+
+---
+
+## ETAPA 3 — ANÁLISE DAS IMAGENS
+
+Analise cada imagem:
+
+📸 Imagem 1:
+📸 Imagem 2:
+📸 Imagem 3:
 ...
 
-🧰 AVALIAÇÃO (0-100)
+Para cada:
+- descrição técnica
+- estado de conservação
+- alterações visíveis
+- observações relevantes
+
+---
+
+## ETAPA 4 — ORIGINALIDADE REAL (%)
+
+Compare com padrão original e avalie:
+
+- % originalidade geral
+- peças não originais
+- sinais de restauração
+- sinais de modificação
+
+---
+
+## ETAPA 5 — AVALIAÇÃO TÉCNICA (0–100)
+
 - Originalidade
 - Lataria/Pintura
 - Interior
@@ -108,11 +155,28 @@ Imagem 3:
 - Estrutura
 - Conservação geral
 
-📊 NOTA FINAL
+---
 
-🏁 STATUS PLACA PRETA (mínimo 80)
+## ETAPA 6 — NOTA FINAL
 
-💰 VALOR DE MERCADO (R$ com justificativa)
+Explique tecnicamente a nota final.
+
+---
+
+## ETAPA 7 — STATUS PLACA PRETA
+
+- APROVADO / REPROVADO / EM ANÁLISE
+- justificativa técnica
+
+---
+
+## ETAPA 8 — VALOR DE MERCADO
+
+Estimativa baseada em:
+- modelo identificado
+- originalidade
+- conservação
+- raridade
 """
 
     response = client.chat.completions.create(
