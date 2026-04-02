@@ -56,7 +56,7 @@ def img_to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🚀 RELATÓRIO PROFISSIONAL REAL (TRAVADO)
+# 🚀 RELATÓRIO NÍVEL VISTORIA REAL
 def gerar_relatorio_real(fotos, dados_veiculo):
 
     imagens = []
@@ -77,79 +77,77 @@ def gerar_relatorio_real(fotos, dados_veiculo):
         })
 
     prompt = f"""
-Você é um PERITO AUTOMOTIVO especializado em veículos antigos seguindo padrão técnico da :contentReference[oaicite:1]{index=1}.
+Você é um PERITO AUTOMOTIVO ESPECIALIZADO EM VEÍCULOS ANTIGOS, atuando com padrão técnico de vistoria para certificação de originalidade e conservação (placa preta).
 
-🚨 PROIBIDO:
-- escrever texto livre
-- usar linguagem genérica
-- inventar informação
+DADOS DO VEÍCULO:
+- Marca: {dados_veiculo.get("marca")}
+- Modelo: {dados_veiculo.get("modelo")}
+- Ano: {dados_veiculo.get("ano")}
 
-🚨 OBRIGATÓRIO:
-- usar SOMENTE o que é visível nas imagens
-- se não for visível: escrever "não visível"
-- preencher TODOS os campos abaixo
-
----
-
-DADOS:
-Marca: {dados_veiculo.get("marca")}
-Modelo: {dados_veiculo.get("modelo")}
-Ano: {dados_veiculo.get("ano")}
+REGRAS OBRIGATÓRIAS:
+- Analise SOMENTE o que estiver visível nas imagens
+- NÃO invente informações
+- NÃO use linguagem genérica
+- NÃO use termos vagos como "parece bom"
+- Seja técnico, objetivo e direto
+- Quando algo não for visível: escreva "não visível nas imagens"
+- Aponte inconsistências entre fotos se existirem
 
 ---
 
-📊 AVALIAÇÃO TÉCNICA
+CRITÉRIOS (NOTA 0 A 100):
 
-ORIGINALIDADE:
-Descrição:
-Nota (0-100):
-
-LATARIA/PINTURA:
-Descrição:
-Nota (0-100):
-
-INTERIOR:
-Descrição:
-Nota (0-100):
-
-MOTOR (VISUAL):
-Descrição:
-Nota (0-100):
-
-ESTRUTURA:
-Descrição:
-Nota (0-100):
-
-CONSERVAÇÃO GERAL:
-Descrição:
-Nota (0-100):
+1. ORIGINALIDADE
+2. LATARIA E PINTURA
+3. INTERIOR
+4. MOTOR E COMPONENTES VISÍVEIS
+5. ESTRUTURA
+6. CONSERVAÇÃO GERAL
 
 ---
 
-📸 ANÁLISE POR IMAGEM (OBRIGATÓRIO)
-Liste cada imagem separadamente e descreva tecnicamente o que vê.
+PARA CADA ITEM:
+- Descrever tecnicamente o que está visível
+- Dar nota de 0 a 100
 
 ---
 
-📈 RESULTADO FINAL
-
-NOTA FINAL (média das notas):
-
-STATUS PLACA PRETA:
-(APTO se >= 80, senão NÃO APTO)
-
-JUSTIFICATIVA TÉCNICA:
+ANÁLISE POR IMAGEM:
+- Descrever objetivamente cada imagem
+- Identificar defeitos visuais reais (riscos, desalinhamento, desgaste, etc)
 
 ---
 
-💰 VALOR DE MERCADO
-
-Faixa estimada (R$):
-Justificativa baseada no estado visual
+CÁLCULO FINAL:
+- Calcular média das notas
+- Gerar NOTA FINAL (0 a 100)
 
 ---
 
-🚨 SE NÃO PREENCHER TUDO, O RELATÓRIO ESTÁ ERRADO.
+PLACA PRETA:
+- Mínimo aceitável: 80 pontos
+- Informar: APTO ou NÃO APTO
+- Justificar tecnicamente
+
+---
+
+AVALIAÇÃO DE MERCADO:
+- Estimar valor em reais (R$)
+- Baseado no estado visual
+- Considerar mercado brasileiro de clássicos
+
+---
+
+FORMATO FINAL:
+
+1. Resumo técnico geral  
+2. Análise por imagem  
+3. Avaliação por critérios (com notas)  
+4. Nota final  
+5. Status placa preta (APTO / NÃO APTO)  
+6. Avaliação de mercado  
+
+Gere um relatório técnico de vistoria, objetivo, detalhado e profissional.
 """
 
     response = client.chat.completions.create(
@@ -163,7 +161,7 @@ Justificativa baseada no estado visual
                 ]
             }
         ],
-        temperature=0  # 🔥 MAIS RÍGIDO AINDA
+        temperature=0.1
     )
 
     return response.choices[0].message.content
@@ -186,60 +184,43 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None),
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
-    foto_porta_malas: Optional[UploadFile] = File(None),
-    foto_chassi: Optional[UploadFile] = File(None),
-    foto_adicional: Optional[UploadFile] = File(None),
 ):
 
     nome_limpo = (nome or "cliente").strip().replace(" ", "_")
     telefone_limpo = (telefone or "sem_numero").strip().replace(" ", "")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    uid = uuid.uuid4().hex[:6]
-
-    cliente_id = f"{nome_limpo}_{telefone_limpo}_{timestamp}_{uid}"
+    cliente_id = f"{nome_limpo}_{telefone_limpo}_{uuid.uuid4().hex[:6]}"
 
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
-    data_brasil = datetime.now(
-        ZoneInfo("America/Sao_Paulo")
-    ).strftime("%d/%m/%Y %H:%M:%S")
-
     dados = {
-        "id": cliente_id,
         "nome": nome,
-        "email": email,
         "telefone": telefone,
         "veiculo": {
             "marca": marca,
             "modelo": modelo,
             "ano": ano
         },
-        "data": data_brasil
+        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
     }
-
-    json_path = os.path.join(pasta, "dados.json")
 
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral.jpg"),
+        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral1.jpg"),
         "lateral_esquerda": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral2.jpg"),
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
     }
 
-    dados["fotos"] = fotos
-
     try:
-        relatorio = gerar_relatorio_real(fotos, dados["veiculo"])
-        dados["relatorio_ai"] = relatorio
+        dados["relatorio_ai"] = gerar_relatorio_real(fotos, dados["veiculo"])
     except Exception as e:
         dados["relatorio_ai"] = f"Erro IA: {str(e)}"
 
-    with open(json_path, "w", encoding="utf-8") as f:
+    with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
     return {"status": "ok", "cliente_id": cliente_id}
@@ -248,39 +229,11 @@ async def avaliacao(
 # 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
+    html = "<h1>📊 Avaliações</h1>"
 
-    clientes = []
+    for pasta in os.listdir(UPLOAD_DIR):
+        html += f'<div><a href="/cliente/{pasta}">{pasta}</a></div>'
 
-    for pasta_cliente in os.listdir(UPLOAD_DIR):
-        pasta_path = os.path.join(UPLOAD_DIR, pasta_cliente)
-
-        if not os.path.isdir(pasta_path):
-            continue
-
-        json_path = os.path.join(pasta_path, "dados.json")
-
-        dados = {}
-        if os.path.exists(json_path):
-            with open(json_path, "r", encoding="utf-8") as f:
-                dados = json.load(f)
-
-        clientes.append({"id": pasta_cliente, "dados": dados})
-
-    clientes.sort(key=lambda c: c["dados"].get("data", ""), reverse=True)
-
-    html = "<html><body style='font-family:Arial;padding:20px'><h1>📊 Vistorias IA</h1>"
-
-    for c in clientes:
-        d = c["dados"]
-        html += f"""
-        <div style="background:white;padding:15px;margin-bottom:10px;border-radius:8px">
-            <b>{d.get('nome','')}</b><br>
-            📞 {d.get('telefone','')}<br>
-            <a href="/cliente/{c['id']}">Ver relatório</a>
-        </div>
-        """
-
-    html += "</body></html>"
     return HTMLResponse(html)
 
 
@@ -288,30 +241,17 @@ def avaliacoes():
 @app.get("/cliente/{cliente_id}", response_class=HTMLResponse)
 def cliente(cliente_id: str):
 
-    pasta = os.path.join(UPLOAD_DIR, cliente_id)
-    json_path = os.path.join(pasta, "dados.json")
+    path = f"{UPLOAD_DIR}/{cliente_id}/dados.json"
 
-    if not os.path.exists(json_path):
-        return HTMLResponse("Cliente não encontrado")
+    if not os.path.exists(path):
+        return HTMLResponse("Não encontrado")
 
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         dados = json.load(f)
 
-    fotos = []
-    for file in os.listdir(pasta):
-        if file.endswith(".jpg"):
-            fotos.append(f"/uploads/{cliente_id}/{file}")
-
-    html = f"<html><body style='font-family:Arial;padding:20px'>"
-
-    html += f"<h2>{dados.get('nome','')}</h2><h3>📸 Fotos</h3>"
-
-    for f in fotos:
-        html += f'<img src="{f}" width="200" style="margin:5px"/>'
-
-    html += "<h3>🤖 Relatório IA PROFISSIONAL</h3>"
-    html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
-
-    html += "</body></html>"
+    html = f"""
+    <h2>{dados.get("nome")}</h2>
+    <pre>{dados.get("relatorio_ai")}</pre>
+    """
 
     return HTMLResponse(html)
