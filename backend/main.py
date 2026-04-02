@@ -56,7 +56,7 @@ def img_to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🚀 IA VISÃO REAL (COM PROMPT PROFISSIONAL)
+# 🚀 RELATÓRIO PROFISSIONAL REAL (TRAVADO)
 def gerar_relatorio_real(fotos, dados_veiculo):
 
     imagens = []
@@ -77,90 +77,79 @@ def gerar_relatorio_real(fotos, dados_veiculo):
         })
 
     prompt = f"""
-Você é um AVALIADOR AUTOMOTIVO PROFISSIONAL especializado em veículos antigos, atuando com critérios técnicos semelhantes aos utilizados pela :contentReference[oaicite:0]{index=0}.
+Você é um PERITO AUTOMOTIVO especializado em veículos antigos seguindo padrão técnico da :contentReference[oaicite:1]{index=1}.
 
-DADOS DO VEÍCULO:
-- Marca: {dados_veiculo.get("marca")}
-- Modelo: {dados_veiculo.get("modelo")}
-- Ano: {dados_veiculo.get("ano")}
+🚨 PROIBIDO:
+- escrever texto livre
+- usar linguagem genérica
+- inventar informação
 
-REGRAS OBRIGATÓRIAS:
-- Analise SOMENTE o que estiver visível nas imagens
-- NÃO invente informações
-- NÃO use linguagem genérica
-- NÃO use achismos
-- Utilize linguagem técnica, objetiva e profissional
-- Quando algo não for visível, declare: "não visível nas imagens"
-- Se houver inconsistência entre imagens, aponte tecnicamente
+🚨 OBRIGATÓRIO:
+- usar SOMENTE o que é visível nas imagens
+- se não for visível: escrever "não visível"
+- preencher TODOS os campos abaixo
 
 ---
 
-CRITÉRIOS DE AVALIAÇÃO (NOTA 0 A 100):
-
-1. ORIGINALIDADE
-- presença de peças originais vs modificações visíveis
-
-2. LATARIA E PINTURA
-- riscos, amassados, ondulações, qualidade da pintura, oxidação
-
-3. INTERIOR
-- estado de bancos, painel, acabamento e desgaste
-
-4. MOTOR E COMPONENTES VISÍVEIS
-- aparência, originalidade, sinais de intervenção
-
-5. ESTRUTURA
-- alinhamento, integridade aparente, indícios de reparo
-
-6. ESTADO GERAL DE CONSERVAÇÃO
+DADOS:
+Marca: {dados_veiculo.get("marca")}
+Modelo: {dados_veiculo.get("modelo")}
+Ano: {dados_veiculo.get("ano")}
 
 ---
 
-PARA CADA ITEM:
-- descreva tecnicamente o que está visível
-- atribua uma nota de 0 a 100
+📊 AVALIAÇÃO TÉCNICA
+
+ORIGINALIDADE:
+Descrição:
+Nota (0-100):
+
+LATARIA/PINTURA:
+Descrição:
+Nota (0-100):
+
+INTERIOR:
+Descrição:
+Nota (0-100):
+
+MOTOR (VISUAL):
+Descrição:
+Nota (0-100):
+
+ESTRUTURA:
+Descrição:
+Nota (0-100):
+
+CONSERVAÇÃO GERAL:
+Descrição:
+Nota (0-100):
 
 ---
 
-ANÁLISE POR IMAGEM:
-- descreva o que cada imagem mostra tecnicamente
-- destaque inconsistências ou danos específicos
+📸 ANÁLISE POR IMAGEM (OBRIGATÓRIO)
+Liste cada imagem separadamente e descreva tecnicamente o que vê.
 
 ---
 
-AVALIAÇÃO FINAL:
+📈 RESULTADO FINAL
 
-- calcule a média das notas
-- informe NOTA FINAL (0 a 100)
+NOTA FINAL (média das notas):
 
-CRITÉRIO DE PLACA PRETA:
-- mínimo de 80% de originalidade e conservação
+STATUS PLACA PRETA:
+(APTO se >= 80, senão NÃO APTO)
 
-Informe:
-
-✔ APTO ou NÃO APTO para placa preta  
-✔ justificativa técnica detalhada  
+JUSTIFICATIVA TÉCNICA:
 
 ---
 
-AVALIAÇÃO DE MERCADO:
+💰 VALOR DE MERCADO
 
-- estime faixa de valor em reais (R$)
-- baseie-se no estado visual observado
-- utilize coerência com mercado brasileiro de clássicos
+Faixa estimada (R$):
+Justificativa baseada no estado visual
 
 ---
 
-FORMATO FINAL:
-
-1. Resumo técnico geral  
-2. Análise por imagem  
-3. Avaliação por critérios com notas  
-4. Nota final  
-5. Status placa preta (APTO / NÃO APTO)  
-6. Avaliação de mercado  
-
-Gere um relatório técnico completo, detalhado e profissional.
+🚨 SE NÃO PREENCHER TUDO, O RELATÓRIO ESTÁ ERRADO.
 """
 
     response = client.chat.completions.create(
@@ -174,13 +163,13 @@ Gere um relatório técnico completo, detalhado e profissional.
                 ]
             }
         ],
-        temperature=0.2
+        temperature=0  # 🔥 MAIS RÍGIDO AINDA
     )
 
     return response.choices[0].message.content
 
 
-# 📥 ENDPOINT PRINCIPAL
+# 📥 ENDPOINT
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -256,12 +245,6 @@ async def avaliacao(
     return {"status": "ok", "cliente_id": cliente_id}
 
 
-# 🏠 ROOT
-@app.get("/")
-def root():
-    return {"status": "backend funcionando 🚀"}
-
-
 # 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
@@ -285,15 +268,10 @@ def avaliacoes():
 
     clientes.sort(key=lambda c: c["dados"].get("data", ""), reverse=True)
 
-    html = """
-    <html>
-    <body style="font-family:Arial;padding:20px">
-    <h1>📊 Vistorias IA (Padrão FBVA)</h1>
-    """
+    html = "<html><body style='font-family:Arial;padding:20px'><h1>📊 Vistorias IA</h1>"
 
     for c in clientes:
         d = c["dados"]
-
         html += f"""
         <div style="background:white;padding:15px;margin-bottom:10px;border-radius:8px">
             <b>{d.get('nome','')}</b><br>
@@ -324,19 +302,14 @@ def cliente(cliente_id: str):
         if file.endswith(".jpg"):
             fotos.append(f"/uploads/{cliente_id}/{file}")
 
-    html = f"""
-    <html>
-    <body style="font-family:Arial;padding:20px">
+    html = f"<html><body style='font-family:Arial;padding:20px'>"
 
-    <h2>{dados.get("nome","")}</h2>
-
-    <h3>📸 Fotos</h3>
-    """
+    html += f"<h2>{dados.get('nome','')}</h2><h3>📸 Fotos</h3>"
 
     for f in fotos:
         html += f'<img src="{f}" width="200" style="margin:5px"/>'
 
-    html += "<h3>🤖 Relatório IA</h3>"
+    html += "<h3>🤖 Relatório IA PROFISSIONAL</h3>"
     html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
 
     html += "</body></html>"
