@@ -36,7 +36,6 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def salvar_imagem(file: UploadFile, caminho: str):
     if not file:
         return None
-
     content = file.file.read()
     if not content:
         return None
@@ -55,57 +54,10 @@ def img_to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🔍 ANALISAR UMA IMAGEM (VISÃO REAL)
-def analisar_imagem(nome, base64_img):
+# 🚀 GERAR RELATÓRIO PROFISSIONAL (1 CHAMADA SÓ)
+def gerar_relatorio_real(fotos, dados_veiculo):
 
-    prompt = f"""
-Você é um PERITO AUTOMOTIVO profissional.
-
-Analise APENAS esta imagem: {nome}
-
-REGRAS IMPORTANTES:
-- descreva somente o que está visível
-- NÃO invente nada
-- NÃO use frases genéricas
-- seja técnico e objetivo
-- identifique:
-  * riscos
-  * arranhões
-  * amassados
-  * ferrugem
-  * desgaste
-  * estado de pintura
-  * estado de peças visíveis
-
-Responda em tópicos curtos.
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_img}"
-                        }
-                    }
-                ]
-            }
-        ],
-        temperature=0.2
-    )
-
-    return response.choices[0].message.content
-
-
-# 🚀 GERAR RELATÓRIO FINAL (CONSOLIDADO)
-def gerar_relatorio_real(fotos):
-
-    analises = {}
+    imagens = []
 
     for nome, path in fotos.items():
         if not path:
@@ -115,37 +67,61 @@ def gerar_relatorio_real(fotos):
         if not b64:
             continue
 
-        analises[nome] = analisar_imagem(nome, b64)
+        imagens.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{b64}"
+            }
+        })
 
-    prompt_final = f"""
-Você é um PERITO AUTOMOTIVO nível seguradora.
+    prompt = f"""
+Você é um PERITO AUTOMOTIVO PROFISSIONAL nível seguradora.
 
-Com base nas análises individuais abaixo, gere um RELATÓRIO FINAL COMPLETO:
+Você está analisando um veículo com as seguintes informações:
 
-ANÁLISES:
-{json.dumps(analises, indent=2, ensure_ascii=False)}
+- Marca: {dados_veiculo.get("marca")}
+- Modelo: {dados_veiculo.get("modelo")}
+- Ano: {dados_veiculo.get("ano")}
 
-REGRAS:
+REGRAS OBRIGATÓRIAS:
+- analise TODAS as imagens com atenção
 - NÃO invente informações
-- NÃO repita frases vazias
-- use SOMENTE evidências descritas
-- seja técnico e preciso
+- NÃO use frases genéricas
+- baseie-se SOMENTE no que estiver visível
+- seja técnico, preciso e objetivo
+- identifique danos reais quando existirem
 
-FORMATO FINAL:
+AVALIAÇÃO OBRIGATÓRIA:
+- pintura
+- lataria
+- interior
+- motor
+- rodas/pneus
+- sinais de desgaste ou colisão
+
+CLASSIFICAÇÃO FINAL:
+EXCELENTE / BOM / REGULAR / RUIM
+
+FORMATO DO RELATÓRIO:
 
 1. Resumo geral
-2. Exterior
+2. Exterior (lataria e pintura)
 3. Interior
 4. Motor e mecânica
-5. Estrutura
-6. Conclusão final com nota:
-   EXCELENTE / BOM / REGULAR / RUIM
+5. Estrutura e integridade
+6. Conclusão técnica final
 """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "user", "content": prompt_final}
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *imagens
+                ]
+            }
         ],
         temperature=0.2
     )
@@ -209,21 +185,18 @@ async def avaliacao(
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral_direita.jpg"),
-        "lateral_esquerda": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral_esquerda.jpg"),
+        "lateral_direita": salvar_imagem(foto_lateral_direita, f"{pasta}/lateral.jpg"),
+        "lateral_esquerda": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lateral2.jpg"),
         "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
-        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
+        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
     }
 
     dados["fotos"] = fotos
 
-    # 🔥 RELATÓRIO REAL COM VISÃO
+    # 🔥 IA VISÃO REAL (1 REQUEST SÓ)
     try:
-        relatorio = gerar_relatorio_real(fotos)
+        relatorio = gerar_relatorio_real(fotos, dados["veiculo"])
         dados["relatorio_ai"] = relatorio
     except Exception as e:
         dados["relatorio_ai"] = f"Erro IA: {str(e)}"
@@ -266,7 +239,7 @@ def avaliacoes():
     html = """
     <html>
     <head>
-        <title>Avaliações</title>
+        <title>Avaliações IA Vision</title>
         <style>
             body { font-family: Arial; background:#f4f4f4; padding:20px; }
             .card { background:white; padding:15px; margin-bottom:15px; border-radius:10px; }
@@ -275,7 +248,7 @@ def avaliacoes():
         </style>
     </head>
     <body>
-        <h1>📊 Avaliações com IA Vision</h1>
+        <h1>📊 Vistorias com IA Vision</h1>
     """
 
     for c in clientes:
@@ -324,7 +297,7 @@ def cliente(cliente_id: str):
     for f in fotos:
         html += f'<img src="{f}" width="200" style="margin:5px"/>'
 
-    html += "<h3>🤖 Relatório IA (VISÃO REAL)</h3>"
+    html += "<h3>🤖 Relatório IA Vision</h3>"
     html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
 
     html += "</body></html>"
