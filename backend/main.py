@@ -61,7 +61,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT NOVO (BASEADO NO SEU RELATÓRIO REAL)
+# 🧠 PROMPT (NÃO ALTERADO - COMO PEDIDO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -134,7 +134,6 @@ Avaliar:
 ────────────────────────────────────────
 
 📊 RESULTADO FINAL
-Carroceria / Interior / Mecânica / Conservação
 TOTAL: XX / 100
 
 ────────────────────────────────────────
@@ -163,7 +162,7 @@ APROVADO ou REPROVADO para placa preta
 """
 
 
-# 🤖 IA VISTORIA PROFISSIONAL
+# 🤖 IA VISTORIA
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -202,7 +201,7 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📥 upload
+# 📥 AVALIAÇÃO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -226,6 +225,8 @@ async def avaliacao(
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
+    url_publica = f"/cliente/{cliente_id}"
+
     dados = {
         "nome": nome,
         "email": email,
@@ -235,7 +236,9 @@ async def avaliacao(
             "modelo": modelo,
             "ano": ano
         },
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
+        "id": cliente_id,
+        "url": url_publica
     }
 
     fotos = {
@@ -257,7 +260,7 @@ async def avaliacao(
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
-    return {"ok": True, "id": cliente_id}
+    return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
 # 📊 DASHBOARD
@@ -290,11 +293,14 @@ def avaliacoes():
     for id_, d in clientes:
         html += f"""
         <div class="card">
-            <b>{d.get('nome')}</b><br>
-            📞 {d.get('telefone')}<br>
-            📅 {d.get('data')}<br><br>
 
-            <a class="btn" href="/cliente/{id_}">Ver relatório</a>
+            👤 <b>{d.get('nome')}</b><br>
+            📞 {d.get('telefone')}<br>
+            📅 {d.get('data')}<br>
+            📧 {d.get('email')}<br>
+            🆔 {id_}<br>
+            🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
+
         </div>
         """
 
@@ -338,9 +344,11 @@ def cliente(id: str):
     <a class="btn" href="/avaliacoes">⬅ Voltar</a>
 
     <div class="card">
-        <b>{d.get("nome")}</b><br>
+        👤 <b>{d.get("nome")}</b><br>
         📞 {d.get("telefone")}<br>
-        📅 {d.get("data")}
+        📅 {d.get("data")}<br>
+        📧 {d.get("email")}<br>
+        🆔 {d.get("id")}<br>
     </div>
 
     <div class="card">
