@@ -33,6 +33,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
+# 💾 salvar imagem
 def salvar_imagem(file: UploadFile, path: str):
     if not file:
         return None
@@ -46,6 +47,7 @@ def salvar_imagem(file: UploadFile, path: str):
     return path
 
 
+# 🧠 base64
 def to_base64(path):
     if not path or not os.path.exists(path):
         return None
@@ -53,11 +55,13 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
+# 🔐 hash simples
 def gerar_hash(nome, data, nota):
     raw = f"{nome}-{data}-{nota}".encode()
     return hashlib.md5(raw).hexdigest()
 
 
+# 🧠 PROMPT (NÃO ALTERADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -70,9 +74,95 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 - NÃO mostrar lógica de pontuação
 - Linguagem técnica estilo clube de antigomobilismo
 - Base apenas em evidência visual
+
+────────────────────────────────────────
+
+📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise
+
+────────────────────────────────────────
+
+I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+Avaliar:
+- alinhamento de portas, capô e tampa
+- pintura (original / repintura / verniz moderno)
+- cromados e lanternas
+- rodas e pneus
+- sinais de restauração
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+Avaliar:
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- conservação geral
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+Avaliar:
+- organização do cofre
+- fiação aparente
+- componentes originais visíveis
+- suspensão e rodas (aspecto visual)
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+Avaliar:
+- estrutura
+- borrachas
+- desgaste natural
+
+📌 Subtotal: XX / 10
+
+────────────────────────────────────────
+
+📊 RESULTADO FINAL
+TOTAL: XX / 100
+
+────────────────────────────────────────
+
+🏁 VEREDITO FINAL
+APROVADO ou REPROVADO para placa preta
+
+────────────────────────────────────────
+
+💰 ANÁLISE DE MERCADO
+- venda rápida
+- mercado particular
+- pós certificação
+
+────────────────────────────────────────
+
+🧠 RECOMENDAÇÕES
+- melhorias técnicas
+- peças originais
+- ajustes para aprovação futura
+
+────────────────────────────────────────
+
+✍️ ASSINATURA
+"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
 """
 
 
+# 🤖 IA
 def gerar_relatorio(fotos, dados):
 
     imgs = []
@@ -92,13 +182,15 @@ def gerar_relatorio(fotos, dados):
             }
         })
 
+    prompt = gerar_prompt()
+
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": gerar_prompt()},
+                    {"type": "text", "text": prompt},
                     *imgs
                 ]
             }
@@ -109,7 +201,7 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📥 AVALIAÇÃO (AGORA NOMINADO)
+# 📥 AVALIAÇÃO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -119,15 +211,17 @@ async def avaliacao(
     modelo: Optional[str] = Form(None),
     ano: Optional[str] = Form(None),
 
-    frente_veiculo: Optional[UploadFile] = File(None),
-    traseira: Optional[UploadFile] = File(None),
-    lateral_direita: Optional[UploadFile] = File(None),
-    lateral_esquerda: Optional[UploadFile] = File(None),
-    interior: Optional[UploadFile] = File(None),
-    painel: Optional[UploadFile] = File(None),
-    motor: Optional[UploadFile] = File(None),
-    porta_malas: Optional[UploadFile] = File(None),
-    chassi: Optional[UploadFile] = File(None),
+    foto_frente: Optional[UploadFile] = File(None),
+    foto_traseira: Optional[UploadFile] = File(None),
+    foto_lateral_direita: Optional[UploadFile] = File(None),
+    foto_lateral_esquerda: Optional[UploadFile] = File(None),
+    foto_interior: Optional[UploadFile] = File(None),
+    foto_painel: Optional[UploadFile] = File(None),
+    foto_motor: Optional[UploadFile] = File(None),
+
+    # ✅ NOVAS FOTOS ADICIONADAS
+    foto_porta_malas: Optional[UploadFile] = File(None),
+    foto_chassi: Optional[UploadFile] = File(None),
     foto_adicional: Optional[UploadFile] = File(None),
 ):
 
@@ -152,18 +246,19 @@ async def avaliacao(
         "url": url_publica
     }
 
-    # 📸 SALVAMENTO NOMINADO (SÓ ISSO FOI MUDADO)
     fotos = {
-        "frente_veiculo": salvar_imagem(frente_veiculo, f"{pasta}/frente_veiculo.jpg"),
-        "traseira": salvar_imagem(traseira, f"{pasta}/traseira.jpg"),
-        "lateral_direita": salvar_imagem(lateral_direita, f"{pasta}/lateral_direita.jpg"),
-        "lateral_esquerda": salvar_imagem(lateral_esquerda, f"{pasta}/lateral_esquerda.jpg"),
-        "interior": salvar_imagem(interior, f"{pasta}/interior.jpg"),
-        "painel": salvar_imagem(painel, f"{pasta}/painel.jpg"),
-        "motor": salvar_imagem(motor, f"{pasta}/motor.jpg"),
-        "porta_malas": salvar_imagem(porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(chassi, f"{pasta}/chassi.jpg"),
-        "foto_adicional": salvar_imagem(foto_adicional, f"{pasta}/foto_adicional.jpg"),
+        "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
+        "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
+        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
+        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
+        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
+        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
+        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
+
+        # ✅ NOVAS FOTOS
+        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
+        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
+        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
     }
 
     try:
@@ -178,7 +273,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD (SEM MUDANÇA)
+# 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
 
@@ -208,12 +303,14 @@ def avaliacoes():
     for id_, d in clientes:
         html += f"""
         <div class="card">
+
             👤 <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br>
             📧 {d.get('email')}<br>
             🆔 {id_}<br>
             🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
+
         </div>
         """
 
@@ -221,7 +318,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (SEM MUDANÇA)
+# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -233,17 +330,11 @@ def cliente(id: str):
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
+    fotos_dir = os.path.join(UPLOAD_DIR, id)
     fotos = [
-        f"/uploads/{id}/frente_veiculo.jpg",
-        f"/uploads/{id}/traseira.jpg",
-        f"/uploads/{id}/lateral_direita.jpg",
-        f"/uploads/{id}/lateral_esquerda.jpg",
-        f"/uploads/{id}/interior.jpg",
-        f"/uploads/{id}/painel.jpg",
-        f"/uploads/{id}/motor.jpg",
-        f"/uploads/{id}/porta_malas.jpg",
-        f"/uploads/{id}/chassi.jpg",
-        f"/uploads/{id}/foto_adicional.jpg",
+        f"/uploads/{id}/{f}"
+        for f in os.listdir(fotos_dir)
+        if f.endswith(".jpg")
     ]
 
     html = f"""
@@ -252,20 +343,8 @@ def cliente(id: str):
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
             .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
-
-            .grid {{
-                display:grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap:10px;
-            }}
-
-            .grid img {{
-                width:100%;
-                height:140px;
-                object-fit:cover;
-                border-radius:8px;
-            }}
-
+            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+            .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
         </style>
     </head>
