@@ -293,14 +293,12 @@ def avaliacoes():
     for id_, d in clientes:
         html += f"""
         <div class="card">
-
             👤 <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br>
             📧 {d.get('email')}<br>
             🆔 {id_}<br>
             🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
-
         </div>
         """
 
@@ -308,7 +306,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
+# 👤 CLIENTE (PÁGINA PÚBLICA)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -321,11 +319,12 @@ def cliente(id: str):
         d = json.load(f)
 
     fotos_dir = os.path.join(UPLOAD_DIR, id)
-    fotos = [
+
+    fotos = sorted([
         f"/uploads/{id}/{f}"
         for f in os.listdir(fotos_dir)
-        if f.endswith(".jpg")
-    ]
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+    ])
 
     html = f"""
     <html>
@@ -333,7 +332,7 @@ def cliente(id: str):
         <style>
             body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
             .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
-            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
+            .grid {{ display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }}
             .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
             pre {{ white-space:pre-wrap; }}
         </style>
