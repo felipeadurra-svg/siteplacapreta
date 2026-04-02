@@ -275,78 +275,10 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📥 AVALIAÇÃO
-@app.post("/avaliacao")
-async def avaliacao(
-    nome: Optional[str] = Form(None),
-    email: Optional[str] = Form(None),
-    telefone: Optional[str] = Form(None),
-    marca: Optional[str] = Form(None),
-    modelo: Optional[str] = Form(None),
-    ano: Optional[str] = Form(None),
-
-    foto_frente: Optional[UploadFile] = File(None),
-    foto_traseira: Optional[UploadFile] = File(None),
-    foto_lateral_direita: Optional[UploadFile] = File(None),
-    foto_lateral_esquerda: Optional[UploadFile] = File(None),
-    foto_interior: Optional[UploadFile] = File(None),
-    foto_painel: Optional[UploadFile] = File(None),
-    foto_motor: Optional[UploadFile] = File(None),
-
-    foto_porta_malas: Optional[UploadFile] = File(None),
-    foto_chassi: Optional[UploadFile] = File(None),
-    foto_adicional: Optional[UploadFile] = File(None),
-):
-
-    cliente_id = f"{nome}_{telefone}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
-
-    pasta = os.path.join(UPLOAD_DIR, cliente_id)
-    os.makedirs(pasta, exist_ok=True)
-
-    url_publica = f"/cliente/{cliente_id}"
-
-    dados = {
-        "nome": nome,
-        "email": email,
-        "telefone": telefone,
-        "veiculo": {
-            "marca": marca,
-            "modelo": modelo,
-            "ano": ano
-        },
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
-        "id": cliente_id,
-        "url": url_publica
-    }
-
-    fotos = {
-        "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
-        "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
-        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
-        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
-        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
-    }
-
-    try:
-        relatorio = gerar_relatorio(fotos, dados["veiculo"])
-        dados["relatorio_ai"] = relatorio
-    except Exception as e:
-        dados["relatorio_ai"] = str(e)
-
-    with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=4)
-
-    return {"ok": True, "id": cliente_id, "url": url_publica}
-
-
-# 📊 DASHBOARD (INALTERADO)
+# 📊 DASHBOARD (NOVO VISUAL EM CARD)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
+
     clientes = []
 
     for pasta in os.listdir(UPLOAD_DIR):
@@ -357,133 +289,64 @@ def avaliacoes():
 
     clientes.reverse()
 
-    html = "<html><body><h1>Dashboard</h1>"
-    for id_, d in clientes:
-        html += f"<div><b>{d.get('nome')}</b> - <a href='/cliente/{id_}'>Abrir</a></div>"
-    html += "</body></html>"
-
-    return HTMLResponse(html)
-
-
-# 👤 CLIENTE (ÚNICA PARTE ALTERADA - VISUAL)
-@app.get("/cliente/{id}", response_class=HTMLResponse)
-def cliente(id: str):
-
-    path = os.path.join(UPLOAD_DIR, id, "dados.json")
-
-    if not os.path.exists(path):
-        return HTMLResponse("não encontrado")
-
-    with open(path, "r", encoding="utf-8") as f:
-        d = json.load(f)
-
-    fotos_dir = os.path.join(UPLOAD_DIR, id)
-    fotos = [
-        f"/uploads/{id}/{f}"
-        for f in os.listdir(fotos_dir)
-        if f.endswith(".jpg")
-    ]
-
-    html = f"""
+    html = """
     <html>
     <head>
         <style>
-            body {{
+            body {
                 font-family: Arial;
                 background: #ececec;
                 padding: 30px;
-                color: #111;
-            }}
+            }
 
-            .container {{
-                max-width: 1100px;
-                margin: auto;
-            }}
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
 
-            .card {{
+            .card {
                 background: #fff;
-                padding: 25px;
-                margin-bottom: 20px;
-                border-radius: 16px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-                border-left: 6px solid #111;
-            }}
-
-            h2, h3 {{
-                text-align: center;
-                font-weight: bold;
-            }}
-
-            .info {{
-                text-align: center;
-                line-height: 1.6;
-            }}
-
-            .grid {{
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-            }}
-
-            .grid img {{
-                width: 100%;
-                height: 160px;
-                object-fit: cover;
-                border-radius: 10px;
-            }}
-
-            pre {{
-                background: #f4f4f4;
                 padding: 18px;
+                margin-bottom: 18px;
                 border-radius: 12px;
-                white-space: pre-wrap;
-                font-size: 14px;
-                line-height: 1.6;
-            }}
+                box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+                border-left: 6px solid #111;
+            }
+
+            .btn {
+                display: inline-block;
+                margin-top: 10px;
+                background: #111;
+                color: #fff;
+                padding: 8px 14px;
+                text-decoration: none;
+                border-radius: 6px;
+                font-size: 13px;
+            }
         </style>
     </head>
-
     <body>
-    <div class="container">
 
-        <div class="card">
-            <h2>🏁 LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h2>
-            <div class="info">
-                <b>{d.get("nome")}</b><br>
-                {d.get("telefone")}<br>
-                {d.get("email")}<br>
-                {d.get("data")}<br>
-                ID: <b>{d.get("id")}</b>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>📸 FOTOS DO VEÍCULO</h3>
-            <div class="grid">
+    <h1>📊 Dashboard Vistoria Placa Preta</h1>
     """
 
-    for f in fotos:
-        html += f'<img src="{f}"/>'
-
-    html += f"""
-            </div>
-        </div>
-
+    for id_, d in clientes:
+        html += f"""
         <div class="card">
-            <h3>🤖 RELATÓRIO TÉCNICO</h3>
-            <pre>{d.get("relatorio_ai","")}</pre>
-        </div>
 
-        <div class="card">
-            <h3>🔐 VALIDAÇÃO DIGITAL</h3>
-            <div class="info">
-                <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b>
-            </div>
-        </div>
+            <b>👤 {d.get('nome')}</b><br>
+            📞 {d.get('telefone')}<br>
+            📧 {d.get('email')}<br>
+            📅 {d.get('data')}<br>
+            🆔 ID: {id_}<br>
 
-    </div>
-    </body>
-    </html>
-    """
+            <a class="btn" href="/cliente/{id_}" target="_blank">
+                Abrir relatório
+            </a>
+
+        </div>
+        """
+
+    html += "</body></html>"
 
     return HTMLResponse(html)
