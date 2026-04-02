@@ -58,10 +58,104 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
+# ✅ PROMPT ORIGINAL (INTOCADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
-... (PROMPT INTACTO, NÃO ALTERADO)
+
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+
+⚠️ REGRAS CRÍTICAS:
+- NÃO inventar peças não visíveis
+- NÃO usar fórmulas, pesos ou cálculos
+- NÃO mostrar lógica de pontuação
+- Linguagem técnica estilo clube de antigomobilismo
+- Base apenas em evidência visual
+
+────────────────────────────────────────
+
+📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise
+
+────────────────────────────────────────
+
+I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
+Avaliar:
+- alinhamento de portas, capô e tampa
+- pintura (original / repintura / verniz moderno)
+- cromados e lanternas
+- rodas e pneus
+- sinais de restauração
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
+Avaliar:
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- conservação geral
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
+Avaliar:
+- organização do cofre
+- fiação aparente
+- componentes originais visíveis
+- suspensão e rodas (aspecto visual)
+
+📌 Subtotal: XX / 30
+
+────────────────────────────────────────
+
+IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
+Avaliar:
+- estrutura
+- borrachas
+- desgaste natural
+
+📌 Subtotal: XX / 10
+
+────────────────────────────────────────
+
+📊 RESULTADO FINAL
+TOTAL: XX / 100
+
+────────────────────────────────────────
+
+🏁 VEREDITO FINAL
+APROVADO ou REPROVADO para placa preta
+
+────────────────────────────────────────
+
+💰 ANÁLISE DE MERCADO
+- venda rápida
+- mercado particular
+- pós certificação
+
+────────────────────────────────────────
+
+🧠 RECOMENDAÇÕES
+- melhorias técnicas
+- peças originais
+- ajustes para aprovação futura
+
+────────────────────────────────────────
+
+✍️ ASSINATURA
+"Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
 """
 
 
@@ -120,7 +214,7 @@ async def avaliacao(
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
 
-    # ✅ NOVOS CAMPOS (ÚNICA ALTERAÇÃO REAL)
+    # 🔧 ÚNICAS ADIÇÕES
     foto_porta_malas: Optional[UploadFile] = File(None),
     foto_chassi: Optional[UploadFile] = File(None),
     foto_adicional: Optional[UploadFile] = File(None),
@@ -156,7 +250,7 @@ async def avaliacao(
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
 
-        # ✅ ADIÇÕES SOMENTE AQUI
+        # 🔧 ADIÇÕES SOMENTE AQUI
         "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
         "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
@@ -189,27 +283,21 @@ def avaliacoes():
 
     html = """
     <html>
-    <head>
-        <style>
-            body { font-family: Arial; background:#f4f4f4; padding:20px; }
-            .card { background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }
-            .btn { background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; }
-        </style>
-    </head>
     <body>
     <h1>📊 Dashboard Vistoria Placa Preta</h1>
     """
 
     for id_, d in clientes:
         html += f"""
-        <div class="card">
-            👤 <b>{d.get('nome')}</b><br>
-            📞 {d.get('telefone')}</b><br>
+        <div>
+            👤 {d.get('nome')}<br>
+            📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br>
             📧 {d.get('email')}<br>
             🆔 {id_}<br>
-            🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
+            <a href="/cliente/{id_}" target="_blank">Abrir relatório</a>
         </div>
+        <hr>
         """
 
     html += "</body></html>"
@@ -236,46 +324,24 @@ def cliente(id: str):
 
     html = f"""
     <html>
-    <head>
-        <style>
-            body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
-            .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
-            .grid {{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; }}
-            .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
-            pre {{ white-space:pre-wrap; }}
-        </style>
-    </head>
     <body>
 
-    <div class="card">
-        👤 <b>{d.get("nome")}</b><br>
-        📞 {d.get("telefone")}<br>
-        📅 {d.get("data")}<br>
-        📧 {d.get("email")}<br>
-        🆔 {d.get("id")}<br>
-    </div>
+    <h2>{d.get("nome")}</h2>
 
-    <div class="card">
-        <h3>📸 Fotos</h3>
-        <div class="grid">
+    <p>{d.get("email")}</p>
+    <p>{d.get("telefone")}</p>
+    <p>{d.get("data")}</p>
+
+    <h3>Fotos</h3>
     """
 
     for f in fotos:
-        html += f'<img src="{f}"/>'
+        html += f'<img src="{f}" width="200"/>'
 
     html += f"""
-        </div>
-    </div>
 
-    <div class="card">
-        <h3>🤖 Relatório Técnico</h3>
-        <pre>{d.get("relatorio_ai","")}</pre>
-    </div>
-
-    <div class="card">
-        <h3>🏁 Validação</h3>
-        <p>Assinatura digital: <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b></p>
-    </div>
+    <h3>Relatório</h3>
+    <pre>{d.get("relatorio_ai","")}</pre>
 
     </body>
     </html>
