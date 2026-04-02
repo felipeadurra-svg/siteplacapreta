@@ -16,7 +16,7 @@ app = FastAPI()
 # 🔑 OPENAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-MODEL = "gpt-4o"  # 🔥 VISÃO REAL FORTE (NÃO MINI)
+MODEL = "gpt-4o"
 
 # 🌍 CORS
 app.add_middleware(
@@ -56,37 +56,7 @@ def img_to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🚨 PROMPT ULTRA RÍGIDO (ANTI-GENERICIDADE)
-VISION_PROMPT = """
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM VISTORIA REAL.
-
-Você está analisando UMA FOTO DO VEÍCULO.
-
-REGRAS OBRIGATÓRIAS:
-- descreva SOMENTE o que está visível na imagem
-- NÃO invente nada
-- NÃO seja genérico
-- NÃO use frases como "parece estar em bom estado"
-- seja específico e técnico
-- cite detalhes visuais concretos
-
-Você deve identificar:
-
-✔ pintura (brilho, desgaste, riscos)
-✔ lataria (amassados, ondulações)
-✔ ferrugem (se visível)
-✔ alinhamento de peças
-✔ estado de conservação real
-✔ danos visuais explícitos
-
-Se algo NÃO for visível:
-→ escreva "não visível nesta imagem"
-
-Agora faça uma análise técnica REAL desta imagem.
-"""
-
-
-# 🚀 IA VISÃO REAL (ROBUSTA)
+# 🚀 IA VISÃO REAL (COM PROMPT PROFISSIONAL)
 def gerar_relatorio_real(fotos, dados_veiculo):
 
     imagens = []
@@ -107,31 +77,90 @@ def gerar_relatorio_real(fotos, dados_veiculo):
         })
 
     prompt = f"""
-VEÍCULO EM ANÁLISE:
+Você é um AVALIADOR AUTOMOTIVO PROFISSIONAL especializado em veículos antigos, atuando com critérios técnicos semelhantes aos utilizados pela :contentReference[oaicite:0]{index=0}.
+
+DADOS DO VEÍCULO:
 - Marca: {dados_veiculo.get("marca")}
 - Modelo: {dados_veiculo.get("modelo")}
 - Ano: {dados_veiculo.get("ano")}
 
-Agora você receberá várias imagens do veículo.
+REGRAS OBRIGATÓRIAS:
+- Analise SOMENTE o que estiver visível nas imagens
+- NÃO invente informações
+- NÃO use linguagem genérica
+- NÃO use achismos
+- Utilize linguagem técnica, objetiva e profissional
+- Quando algo não for visível, declare: "não visível nas imagens"
+- Se houver inconsistência entre imagens, aponte tecnicamente
 
-IMPORTANTE:
-- Analise TODAS as imagens
-- Cada imagem representa uma visão diferente do veículo
-- Seja extremamente técnico
-- NÃO resuma sem analisar
-- NÃO gere texto genérico
+---
+
+CRITÉRIOS DE AVALIAÇÃO (NOTA 0 A 100):
+
+1. ORIGINALIDADE
+- presença de peças originais vs modificações visíveis
+
+2. LATARIA E PINTURA
+- riscos, amassados, ondulações, qualidade da pintura, oxidação
+
+3. INTERIOR
+- estado de bancos, painel, acabamento e desgaste
+
+4. MOTOR E COMPONENTES VISÍVEIS
+- aparência, originalidade, sinais de intervenção
+
+5. ESTRUTURA
+- alinhamento, integridade aparente, indícios de reparo
+
+6. ESTADO GERAL DE CONSERVAÇÃO
+
+---
+
+PARA CADA ITEM:
+- descreva tecnicamente o que está visível
+- atribua uma nota de 0 a 100
+
+---
+
+ANÁLISE POR IMAGEM:
+- descreva o que cada imagem mostra tecnicamente
+- destaque inconsistências ou danos específicos
+
+---
+
+AVALIAÇÃO FINAL:
+
+- calcule a média das notas
+- informe NOTA FINAL (0 a 100)
+
+CRITÉRIO DE PLACA PRETA:
+- mínimo de 80% de originalidade e conservação
+
+Informe:
+
+✔ APTO ou NÃO APTO para placa preta  
+✔ justificativa técnica detalhada  
+
+---
+
+AVALIAÇÃO DE MERCADO:
+
+- estime faixa de valor em reais (R$)
+- baseie-se no estado visual observado
+- utilize coerência com mercado brasileiro de clássicos
+
+---
 
 FORMATO FINAL:
 
-1. Resumo técnico geral
-2. Análise detalhada por imagem (IMPORTANTE)
-3. Exterior (pintura e lataria)
-4. Interior
-5. Estrutura e integridade
-6. Conclusão final
+1. Resumo técnico geral  
+2. Análise por imagem  
+3. Avaliação por critérios com notas  
+4. Nota final  
+5. Status placa preta (APTO / NÃO APTO)  
+6. Avaliação de mercado  
 
-CLASSIFICAÇÃO FINAL:
-RUIM / REGULAR / BOM / ÓTIMO
+Gere um relatório técnico completo, detalhado e profissional.
 """
 
     response = client.chat.completions.create(
@@ -203,7 +232,6 @@ async def avaliacao(
 
     json_path = os.path.join(pasta, "dados.json")
 
-    # 📸 FOTOS
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
@@ -216,7 +244,6 @@ async def avaliacao(
 
     dados["fotos"] = fotos
 
-    # 🔥 IA VISÃO REAL
     try:
         relatorio = gerar_relatorio_real(fotos, dados["veiculo"])
         dados["relatorio_ai"] = relatorio
@@ -260,28 +287,18 @@ def avaliacoes():
 
     html = """
     <html>
-    <head>
-        <title>Avaliações IA Vision</title>
-        <style>
-            body { font-family: Arial; background:#f4f4f4; padding:20px; }
-            .card { background:white; padding:15px; margin-bottom:15px; border-radius:10px; }
-            .btn { padding:8px 12px; background:black; color:white; text-decoration:none; border-radius:6px; }
-            pre { white-space: pre-wrap; }
-        </style>
-    </head>
-    <body>
-        <h1>📊 Vistorias com IA Vision REAL</h1>
+    <body style="font-family:Arial;padding:20px">
+    <h1>📊 Vistorias IA (Padrão FBVA)</h1>
     """
 
     for c in clientes:
         d = c["dados"]
 
         html += f"""
-        <div class="card">
+        <div style="background:white;padding:15px;margin-bottom:10px;border-radius:8px">
             <b>{d.get('nome','')}</b><br>
             📞 {d.get('telefone','')}<br>
-            📅 {d.get('data','')}<br>
-            <a class="btn" href="/cliente/{c['id']}">Ver relatório</a>
+            <a href="/cliente/{c['id']}">Ver relatório</a>
         </div>
         """
 
@@ -319,7 +336,7 @@ def cliente(cliente_id: str):
     for f in fotos:
         html += f'<img src="{f}" width="200" style="margin:5px"/>'
 
-    html += "<h3>🤖 Relatório IA Vision REAL</h3>"
+    html += "<h3>🤖 Relatório IA</h3>"
     html += f"<pre>{dados.get('relatorio_ai','')}</pre>"
 
     html += "</body></html>"
