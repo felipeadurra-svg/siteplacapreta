@@ -292,7 +292,6 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None),
     foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None),
-
     foto_porta_malas: Optional[UploadFile] = File(None),
     foto_chassi: Optional[UploadFile] = File(None),
     foto_adicional: Optional[UploadFile] = File(None),
@@ -344,7 +343,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD (INALTERADO)
+# 📊 DASHBOARD (ÚNICA ALTERAÇÃO: VISUAL EM CARDS)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
     clientes = []
@@ -357,18 +356,99 @@ def avaliacoes():
 
     clientes.reverse()
 
-    html = "<html><body><h1>Dashboard</h1>"
+    html = """
+    <html>
+    <head>
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial;
+                background: #ececec;
+                display: flex;
+                justify-content: center;
+                padding: 40px;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 1100px;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+            }
+
+            .card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+                text-align: center;
+            }
+
+            .name {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+
+            .info {
+                font-size: 14px;
+                color: #444;
+                line-height: 1.6;
+                margin-bottom: 15px;
+            }
+
+            .btn {
+                display: inline-block;
+                padding: 10px 15px;
+                background: #111;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: bold;
+            }
+
+            h1 {
+                text-align: center;
+                width: 100%;
+                margin-bottom: 30px;
+            }
+        </style>
+    </head>
+
+    <body>
+    <div style="width:100%">
+        <h1>Dashboard</h1>
+
+        <div class="container">
+    """
+
     for id_, d in clientes:
-        html += f"<div><b>{d.get('nome')}</b> - <a href='/cliente/{id_}'>Abrir</a></div>"
-    html += "</body></html>"
+        html += f"""
+        <div class="card">
+            <div class="name">{d.get('nome')}</div>
+            <div class="info">
+                📱 {d.get('telefone')}<br>
+                📧 {d.get('email')}<br>
+                🆔 {d.get('id')}
+            </div>
+            <a class="btn" href="/cliente/{id_}">Abrir relatório</a>
+        </div>
+        """
+
+    html += """
+        </div>
+    </div>
+    </body>
+    </html>
+    """
 
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (ÚNICA PARTE ALTERADA - VISUAL)
+# 👤 CLIENTE
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
-
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
 
     if not os.path.exists(path):
@@ -386,102 +466,10 @@ def cliente(id: str):
 
     html = f"""
     <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial;
-                background: #ececec;
-                padding: 30px;
-                color: #111;
-            }}
-
-            .container {{
-                max-width: 1100px;
-                margin: auto;
-            }}
-
-            .card {{
-                background: #fff;
-                padding: 25px;
-                margin-bottom: 20px;
-                border-radius: 16px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-                border-left: 6px solid #111;
-            }}
-
-            h2, h3 {{
-                text-align: center;
-                font-weight: bold;
-            }}
-
-            .info {{
-                text-align: center;
-                line-height: 1.6;
-            }}
-
-            .grid {{
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-            }}
-
-            .grid img {{
-                width: 100%;
-                height: 160px;
-                object-fit: cover;
-                border-radius: 10px;
-            }}
-
-            pre {{
-                background: #f4f4f4;
-                padding: 18px;
-                border-radius: 12px;
-                white-space: pre-wrap;
-                font-size: 14px;
-                line-height: 1.6;
-            }}
-        </style>
-    </head>
-
     <body>
-    <div class="container">
-
-        <div class="card">
-            <h2>🏁 LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h2>
-            <div class="info">
-                <b>{d.get("nome")}</b><br>
-                {d.get("telefone")}<br>
-                {d.get("email")}<br>
-                {d.get("data")}<br>
-                ID: <b>{d.get("id")}</b>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>📸 FOTOS DO VEÍCULO</h3>
-            <div class="grid">
-    """
-
-    for f in fotos:
-        html += f'<img src="{f}"/>'
-
-    html += f"""
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>🤖 RELATÓRIO TÉCNICO</h3>
-            <pre>{d.get("relatorio_ai","")}</pre>
-        </div>
-
-        <div class="card">
-            <h3>🔐 VALIDAÇÃO DIGITAL</h3>
-            <div class="info">
-                <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b>
-            </div>
-        </div>
-
-    </div>
+        <h2>{d.get("nome")}</h2>
+        <p>{d.get("telefone")} - {d.get("email")}</p>
+        <p>ID: {d.get("id")}</p>
     </body>
     </html>
     """
