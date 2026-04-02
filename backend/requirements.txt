@@ -4,6 +4,3 @@ pydantic
 python-multipart
 requests
 openai
-pymongo
-qrcode[pil]
-pillow
