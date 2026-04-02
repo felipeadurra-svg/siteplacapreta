@@ -77,120 +77,81 @@ NÃO descontar pontos sem evidência visual clara
 Linguagem técnica, formal, estilo clube de antigomobilismo
 Base 100% em evidência fotográfica
 Proibido suposições não observáveis
+
 ⚖️ REGRA DE PONTUAÇÃO (CRÍTICA)
 A pontuação deve ser conservadora e tecnicamente justificável
 Só pode haver desconto quando houver prova visual clara
-Cada desconto deve ser acompanhado de:
 
+Cada desconto deve ser acompanhado de:
 👉 Justificativa técnica objetiva baseada na imagem
 
 Exemplo:
-
 “Redução de 2 pontos devido a indícios visuais de repintura na lateral esquerda, perceptível por variação de reflexo e textura”
+
 Se não houver evidência clara → pontuação máxima mantida
 Nunca estimar desgaste sem base visual
+
 📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
+
 📌 IDENTIFICAÇÃO DO VEÍCULO
-Marca
-Modelo
-Ano estimado
-Geração
-Confiança da análise (baixa / média / alta baseada em evidência visual)
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise (baixa / média / alta baseada em evidência visual)
+
 I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
-
 Avaliar:
-
-alinhamento de portas, capô e tampa
-qualidade da pintura (originalidade vs repintura)
-cromados, frisos e lanternas
-rodas e pneus
-sinais visuais de restauração
+- alinhamento de portas, capô e tampa
+- qualidade da pintura (originalidade vs repintura)
+- cromados, frisos e lanternas
+- rodas e pneus
+- sinais visuais de restauração
 
 📌 Subtotal: XX / 30
-📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
-
 Avaliar:
-
-painel e instrumentação
-volante
-bancos e tecidos
-forrações
-estado geral de conservação
+- painel e instrumentação
+- volante
+- bancos e tecidos
+- forrações
+- estado geral de conservação
 
 📌 Subtotal: XX / 30
-📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
-
 Avaliar:
-
-organização do cofre
-fiação aparente
-originalidade de componentes visíveis
-estado visual da suspensão e conjunto mecânico
+- organização do cofre
+- fiação aparente
+- originalidade de componentes visíveis
+- estado visual da suspensão e conjunto mecânico
 
 📌 Subtotal: XX / 30
-📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
-
 Avaliar:
-
-integridade estrutural aparente
-borrachas e vedação
-desgaste natural compatível com idade
+- integridade estrutural aparente
+- borrachas e vedação
+- desgaste natural compatível com idade
 
 📌 Subtotal: XX / 10
-📌 Toda perda de pontos deve ser obrigatoriamente justificada com base visual
 
 📊 RESULTADO FINAL
-
 TOTAL: XX / 100
 
 🏁 VEREDITO FINAL
-APROVADO para placa preta
-ou
-REPROVADO para placa preta
-
-Com justificativa técnica resumida baseada no conjunto visual do veículo.
+APROVADO para placa preta ou REPROVADO para placa preta
 
 💰 ANÁLISE DE MERCADO (BRASIL – CLÁSSICOS)
+- venda rápida
+- mercado particular
+- pós certificação placa preta
 
-Apresentar estimativa realista baseada no estado visual do veículo:
+🧠 RECOMENDAÇÕES TÉCNICAS
+Baseadas exclusivamente em evidências visuais do veículo
 
-💵 Venda rápida (liquidez imediata)
-🏷️ Mercado particular (valor médio de negociação real)
-🏆 Pós-certificação placa preta (potencial de valorização)
-
-📌 Valores obrigatoriamente em R$
-📌 Devem refletir coerência com estado visual observado
-📌 Não utilizar valores genéricos desconectados do veículo
-
-🧠 RECOMENDAÇÕES TÉCNICAS (BASEADAS EM FOTOS – OBRIGATÓRIO)
-
-As recomendações devem ser exclusivamente baseadas nas evidências visuais do veículo apresentado.
-
-⚠️ PROIBIDO:
-
-recomendações genéricas
-sugestões sem ligação com imagens
-peças ou intervenções não justificadas visualmente
-
-✔️ O QUE DEVE SER FEITO:
-
-apontar exatamente o que foi visto nas fotos
-indicar onde há necessidade de correção ou atenção
-sugerir ações específicas baseadas em elementos visíveis
-
-📌 Exemplo de formato correto:
-
-“Ajuste recomendado na área do para-choque dianteiro devido a desalinhamento visível na junção com o paralama esquerdo”
-“Substituição de borracha de vedação da porta direita devido a ressecamento visível”
-“Revisão do acabamento do painel devido a sinais de desgaste concentrado na região central”
 ✍️ ASSINATURA
-
 "Perito Automotivo em Antigomobilismo - Sistema de Avaliação de Originalidade"
 """
 
@@ -321,9 +282,28 @@ def avaliacoes():
     <html>
     <head>
         <style>
-            body { font-family: Arial; background:#f4f4f4; padding:20px; }
-            .card { background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }
-            .btn { background:#000; color:#fff; padding:8px 12px; text-decoration:none; border-radius:6px; }
+            body {
+                font-family: Arial;
+                background: #f7f7f7;
+                padding: 30px;
+            }
+
+            .card {
+                background: #ffffff;
+                padding: 18px;
+                margin-bottom: 18px;
+                border-radius: 12px;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+                border-left: 6px solid #111;
+            }
+
+            .btn {
+                background: #111;
+                color: #fff;
+                padding: 8px 12px;
+                text-decoration: none;
+                border-radius: 6px;
+            }
         </style>
     </head>
     <body>
@@ -333,14 +313,12 @@ def avaliacoes():
     for id_, d in clientes:
         html += f"""
         <div class="card">
-
             👤 <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📅 {d.get('data')}<br>
             📧 {d.get('email')}<br>
             🆔 {id_}<br>
             🌐 <a class="btn" href="/cliente/{id_}" target="_blank">Abrir relatório</a>
-
         </div>
         """
 
@@ -348,7 +326,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
+# 👤 CLIENTE (PÁGINA PÚBLICA PREMIUM VISUAL)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -371,13 +349,53 @@ def cliente(id: str):
     <html>
     <head>
         <style>
-            body {{ font-family: Arial; background:#f4f4f4; padding:20px; }}
-            .card {{ background:#fff; padding:15px; margin-bottom:15px; border-radius:10px; }}
+            body {{
+                font-family: Arial;
+                background: #f7f7f7;
+                padding: 30px;
+                color: #111;
+            }}
 
-            .grid {{ display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }}
+            .card {{
+                background: #fff;
+                padding: 20px;
+                margin-bottom: 20px;
+                border-radius: 14px;
+                box-shadow: 0 6px 22px rgba(0,0,0,0.08);
+                border-left: 6px solid #111;
+            }}
 
-            .grid img {{ width:100%; height:140px; object-fit:cover; border-radius:8px; }}
-            pre {{ white-space:pre-wrap; }}
+            h3 {{
+                margin-bottom: 12px;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 6px;
+            }}
+
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+            }}
+
+            .grid img {{
+                width: 100%;
+                height: 150px;
+                object-fit: cover;
+                border-radius: 10px;
+                transition: transform 0.2s ease;
+            }}
+
+            .grid img:hover {{
+                transform: scale(1.03);
+            }}
+
+            pre {{
+                background: #f2f2f2;
+                padding: 15px;
+                border-radius: 10px;
+                white-space: pre-wrap;
+                font-size: 13px;
+            }}
         </style>
     </head>
     <body>
@@ -391,7 +409,7 @@ def cliente(id: str):
     </div>
 
     <div class="card">
-        <h3>📸 Fotos</h3>
+        <h3>📸 Fotos do Veículo</h3>
         <div class="grid">
     """
 
@@ -408,8 +426,8 @@ def cliente(id: str):
     </div>
 
     <div class="card">
-        <h3>🏁 Validação</h3>
-        <p>Assinatura digital: <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b></p>
+        <h3>🏁 Validação Digital</h3>
+        <p><b>Hash:</b> {gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</p>
     </div>
 
     </body>
