@@ -61,7 +61,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT (NÃO ALTERADO)
+# 🧠 PROMPT (EXATAMENTE IGUAL AO SEU)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -275,10 +275,9 @@ def gerar_relatorio(fotos, dados):
     return response.choices[0].message.content
 
 
-# 📊 DASHBOARD (NOVO VISUAL EM CARD)
+# 📊 DASHBOARD (AGORA DO JEITO CERTO)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
-
     clientes = []
 
     for pasta in os.listdir(UPLOAD_DIR):
@@ -295,21 +294,20 @@ def avaliacoes():
         <style>
             body {
                 font-family: Arial;
-                background: #ececec;
+                background: #f4f4f4;
                 padding: 30px;
             }
 
             h1 {
                 text-align: center;
-                margin-bottom: 30px;
             }
 
             .card {
                 background: #fff;
-                padding: 18px;
-                margin-bottom: 18px;
+                padding: 20px;
+                margin-bottom: 15px;
                 border-radius: 12px;
-                box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+                box-shadow: 0 6px 18px rgba(0,0,0,0.08);
                 border-left: 6px solid #111;
             }
 
@@ -319,31 +317,27 @@ def avaliacoes():
                 background: #111;
                 color: #fff;
                 padding: 8px 14px;
-                text-decoration: none;
                 border-radius: 6px;
-                font-size: 13px;
+                text-decoration: none;
             }
         </style>
     </head>
     <body>
-
-    <h1>📊 Dashboard Vistoria Placa Preta</h1>
+    <h1>📊 Dashboard</h1>
     """
 
     for id_, d in clientes:
         html += f"""
         <div class="card">
-
-            <b>👤 {d.get('nome')}</b><br>
+            👤 <b>{d.get('nome')}</b><br>
             📞 {d.get('telefone')}<br>
             📧 {d.get('email')}<br>
             📅 {d.get('data')}<br>
-            🆔 ID: {id_}<br>
+            🆔 ID: {d.get('id')}<br>
 
             <a class="btn" href="/cliente/{id_}" target="_blank">
                 Abrir relatório
             </a>
-
         </div>
         """
 
