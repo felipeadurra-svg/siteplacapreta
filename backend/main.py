@@ -61,7 +61,7 @@ def gerar_hash(nome, data, nota):
     return hashlib.md5(raw).hexdigest()
 
 
-# 🧠 PROMPT (NÃO ALTERADO)
+# 🧠 PROMPT (CORRIGIDO SÓ PARA USAR OS CAMPOS)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -184,13 +184,22 @@ def gerar_relatorio(fotos, dados):
 
     prompt = gerar_prompt()
 
+    # 🔥 ÚNICA CORREÇÃO REAL AQUI
+    texto_completo = f"""{prompt}
+
+DADOS DO VEÍCULO:
+Marca: {dados.get('marca')}
+Modelo: {dados.get('modelo')}
+Ano: {dados.get('ano')}
+"""
+
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": prompt},
+                    {"type": "text", "text": texto_completo},
                     *imgs
                 ]
             }
@@ -308,7 +317,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (PÁGINA PÚBLICA LIMPA)
+# 👤 CLIENTE
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
