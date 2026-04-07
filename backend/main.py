@@ -362,16 +362,88 @@ def avaliacoes():
     <html>
     <head>
         <style>
-            body { font-family: Arial; background: #f2f2f2; padding: 20px; }
+            body {
+                font-family: Arial;
+                background: #f2f2f2;
+                padding: 20px;
+            }
+
+            h1 {
+                margin-bottom: 20px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 16px;
+            }
+
+            .card {
+                background: #fff;
+                border-radius: 14px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            }
+
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 6px;
+            }
+
+            .info {
+                font-size: 13px;
+                margin: 3px 0;
+                color: #333;
+            }
+
+            .btn {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 10px 12px;
+                background: #111;
+                color: #fff;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 13px;
+            }
         </style>
     </head>
-    <body><h1>Dashboard</h1></body></html>
+
+    <body>
+        <h1>Dashboard</h1>
+
+        <div class="grid">
+    """
+
+    for id_, d in clientes:
+        veiculo = d.get("veiculo", {})
+
+        html += f"""
+        <div class="card">
+            <div class="title">{d.get('nome')}</div>
+
+            <div class="info">🚗 {veiculo.get('marca')} {veiculo.get('modelo')} ({veiculo.get('ano')})</div>
+            <div class="info">📅 {d.get('data')}</div>
+            <div class="info">📧 {d.get('email')}</div>
+            <div class="info">📞 {d.get('telefone')}</div>
+
+            <a class="btn" href="/cliente/{id_}">
+                Abrir laudo completo →
+            </a>
+        </div>
+        """
+
+    html += """
+        </div>
+    </body>
+    </html>
     """
 
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (VISUAL PREMIUM)
+# 👤 CLIENTE (APENAS VISUAL ALTERADO)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -390,74 +462,122 @@ def cliente(id: str):
         if f.endswith(".jpg")
     ]
 
-    texto = d.get("relatorio_ai", "")
-    secoes = re.split(r"\n(?=[IVX]+\.)", texto)
-
-    def render_secao(s):
-        titulo = s.split("\n")[0]
-        conteudo = "<br>".join(s.split("\n")[1:])
-        return f"""
-        <div class="card">
-            <h3>{titulo}</h3>
-            <p>{conteudo}</p>
-        </div>
-        """
-
-    secoes_html = "".join([render_secao(s) for s in secoes if len(s.strip()) > 10])
+    relatorio = d.get("relatorio_ai","")
+    relatorio = re.sub(r"📑 (.+)", r"<h2>\\1</h2>", relatorio)
+    relatorio = re.sub(r"I\\. (.+)", r"<h3>\\1</h3>", relatorio)
+    relatorio = re.sub(r"II\\. (.+)", r"<h3>\\1</h3>", relatorio)
+    relatorio = re.sub(r"III\\. (.+)", r"<h3>\\1</h3>", relatorio)
+    relatorio = re.sub(r"IV\\. (.+)", r"<h3>\\1</h3>", relatorio)
+    relatorio = relatorio.replace("\\n", "<br>")
 
     html = f"""
     <html>
     <head>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Segoe UI';
+                background: linear-gradient(135deg, #0f2f2f, #1e4d4d);
+                padding: 30px;
+                color: #fff;
+            }}
 
-    <style>
-    body {{ margin:0; background:linear-gradient(135deg,#e6ece9,#f8faf9); font-family:'Poppins'; }}
-    .container {{ max-width:1200px;margin:40px auto;background:#fff;border-radius:24px;padding:50px;box-shadow:0 25px 70px rgba(0,0,0,0.15);position:relative;}}
-    .container::before {{content:"";position:absolute;inset:0;border-radius:24px;padding:2px;background:linear-gradient(135deg,#1f7a63,#c6a96b);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}}
-    .selo {{position:absolute;top:30px;right:30px;background:#198754;color:#fff;padding:16px 28px;border-radius:50px;font-weight:bold;transform:rotate(10deg);}}
-    h1 {{font-family:'Playfair Display';text-align:center;font-size:38px;}}
-    .info {{text-align:center;color:#666;margin-bottom:30px;}}
-    .grid {{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}}
-    .grid img {{width:100%;height:180px;object-fit:cover;border-radius:14px;}}
-    .section-title {{text-align:center;font-size:22px;margin-top:50px;}}
-    .cards {{display:grid;grid-template-columns:1fr 1fr;gap:22px;}}
-    .card {{background:#f9fbfa;border-left:6px solid #198754;padding:22px;border-radius:16px;}}
-    .footer {{margin-top:60px;display:flex;justify-content:space-between;}}
-    </style>
+            .container {{
+                max-width: 1100px;
+                margin: auto;
+            }}
+
+            .card {{
+                background: rgba(255,255,255,0.05);
+                padding: 25px;
+                margin-bottom: 20px;
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            }}
+
+            h2 {{
+                text-align: center;
+                color: #d4af37;
+            }}
+
+            h3 {{
+                color: #00e0b8;
+                margin-top: 20px;
+            }}
+
+            .selo {{
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                color: #00ffae;
+                border: 2px solid #00ffae;
+                padding: 10px;
+                border-radius: 10px;
+                margin-top: 15px;
+            }}
+
+            .info {{
+                text-align: center;
+                line-height: 1.6;
+            }}
+
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+            }}
+
+            .grid img {{
+                width: 100%;
+                height: 160px;
+                object-fit: cover;
+                border-radius: 10px;
+            }}
+
+            .relatorio {{
+                line-height: 1.7;
+                font-size: 15px;
+            }}
+        </style>
     </head>
 
     <body>
     <div class="container">
 
-    <div class="selo">✔ APROVADO</div>
+        <div class="card">
+            <h2>🏁 LAUDO TÉCNICO PROFISSIONAL</h2>
+            <div class="info">
+                <b>{d.get("nome")}</b><br>
+                {d.get("telefone")}<br>
+                {d.get("email")}<br>
+                {d.get("data")}<br>
+                ID: <b>{d.get("id")}</b>
+            </div>
 
-    <h1>LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h1>
+            <div class="selo">✔ APROVADO</div>
+        </div>
 
-    <div class="info">
-        <b>{d.get("nome")}</b><br>
-        {d.get("telefone")} • {d.get("email")}<br>
-        {d.get("data")}
-    </div>
-
-    <div class="section-title">📸 FOTOS DO VEÍCULO</div>
-    <div class="grid">
+        <div class="card">
+            <h3>📸 FOTOS DO VEÍCULO</h3>
+            <div class="grid">
     """
 
     for f in fotos:
         html += f'<img src="{f}"/>'
 
     html += f"""
-    </div>
+            </div>
+        </div>
 
-    <div class="section-title">📑 RELATÓRIO TÉCNICO</div>
-    <div class="cards">
-        {secoes_html}
-    </div>
+        <div class="card relatorio">
+            {relatorio}
+        </div>
 
-    <div class="footer">
-        <div>Certificação técnica de originalidade veicular</div>
-        <div><b>{d.get("nome")}</b><br>Responsável Técnico</div>
-    </div>
+        <div class="card">
+            <h3>🔐 VALIDAÇÃO DIGITAL</h3>
+            <div class="info">
+                <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b>
+            </div>
+        </div>
 
     </div>
     </body>
