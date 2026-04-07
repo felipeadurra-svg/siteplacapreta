@@ -55,7 +55,7 @@ const PaymentPage = ({
             Avaliação Técnica Placa Preta
           </span>
           <span className="font-heading text-2xl font-bold text-gradient-gold">
-            R$ 197,00
+            R$ 97,00
           </span>
         </div>
 
