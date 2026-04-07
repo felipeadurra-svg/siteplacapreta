@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Shield, CheckCircle } from "lucide-react";
+import { CreditCard, Shield, CheckCircle, QrCode } from "lucide-react";
 
 interface PaymentPageProps {
   onPaymentConfirm: () => void;
@@ -7,23 +8,57 @@ interface PaymentPageProps {
   isProcessing: boolean;
 }
 
-const PaymentPage = ({ onPaymentConfirm, onBack, isProcessing }: PaymentPageProps) => {
+const PaymentPage = ({
+  onPaymentConfirm,
+  onBack,
+  isProcessing,
+}: PaymentPageProps) => {
+  const [timeLeft, setTimeLeft] = useState(15 * 60);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m.toString().padStart(2, "0")}:${r
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   return (
     <div className="max-w-lg mx-auto text-center">
+
+      {/* ÍCONE */}
       <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-gold mx-auto mb-6">
         <CreditCard className="h-7 w-7 text-primary-foreground" />
       </div>
 
-      <h3 className="font-heading text-2xl font-bold mb-2">Pagamento da Avaliação</h3>
+      {/* TÍTULO */}
+      <h3 className="font-heading text-2xl font-bold mb-2">
+        Pagamento da Avaliação
+      </h3>
+
       <p className="text-muted-foreground mb-8">
         Confirme o pagamento para iniciar a análise do seu veículo.
       </p>
 
+      {/* CARD PRINCIPAL */}
       <div className="bg-card border border-border rounded-xl p-6 mb-8">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-muted-foreground">Avaliação Técnica Placa Preta</span>
-          <span className="font-heading text-2xl font-bold text-gradient-gold">R$ 197,00</span>
+          <span className="text-muted-foreground">
+            Avaliação Técnica Placa Preta
+          </span>
+          <span className="font-heading text-2xl font-bold text-gradient-gold">
+            R$ 197,00
+          </span>
         </div>
+
         <div className="border-t border-border pt-4 space-y-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle className="h-4 w-4 text-primary" />
@@ -40,6 +75,34 @@ const PaymentPage = ({ onPaymentConfirm, onBack, isProcessing }: PaymentPageProp
         </div>
       </div>
 
+      {/* 🔥 CARD PIX (AGORA ACIMA DOS BOTÕES) */}
+      <div className="bg-card border border-border rounded-xl p-6 mb-6">
+
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+          <QrCode className="h-4 w-4" />
+          Pagamento via Pix
+        </div>
+
+        <div className="font-heading text-lg mb-4 text-primary">
+          Expira em {formatTime(timeLeft)}
+        </div>
+
+        <div className="flex justify-center mb-4">
+          <div className="p-3 bg-white rounded-lg">
+            <img
+              src="/qrcode-pix.png"
+              className="w-44 h-44"
+              alt="QR Code Pix"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Escaneie com o app do seu banco para realizar o pagamento
+        </p>
+      </div>
+
+      {/* BOTÕES (AGORA DEPOIS DO QR CODE) */}
       <Button
         variant="gold"
         size="lg"
@@ -50,10 +113,15 @@ const PaymentPage = ({ onPaymentConfirm, onBack, isProcessing }: PaymentPageProp
         {isProcessing ? "Processando..." : "Confirmar Pagamento"}
       </Button>
 
-      <Button variant="ghost" onClick={onBack} className="text-muted-foreground">
+      <Button
+        variant="ghost"
+        onClick={onBack}
+        className="text-muted-foreground"
+      >
         Voltar
       </Button>
 
+      {/* SEGURANÇA */}
       <div className="flex items-center justify-center gap-2 mt-6 text-xs text-muted-foreground">
         <Shield className="h-3 w-3" />
         Pagamento seguro e protegido
