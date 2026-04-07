@@ -11,7 +11,6 @@ import uuid
 import json
 import base64
 import hashlib
-import re
 
 app = FastAPI()
 
@@ -345,7 +344,7 @@ async def avaliacao(
     return {"ok": True, "id": cliente_id, "url": url_publica}
 
 
-# 📊 DASHBOARD (INALTERADO)
+# 📊 DASHBOARD (🔥 ÚNICA PARTE ALTERADA)
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
     clientes = []
@@ -416,6 +415,7 @@ def avaliacoes():
         <div class="grid">
     """
 
+    # 🔥 SOMENTE O LOOP FOI MELHORADO
     for id_, d in clientes:
         veiculo = d.get("veiculo", {})
 
@@ -443,7 +443,7 @@ def avaliacoes():
     return HTMLResponse(html)
 
 
-# 👤 CLIENTE (APENAS VISUAL ALTERADO)
+# 👤 CLIENTE (INALTERADO)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
 
@@ -462,23 +462,15 @@ def cliente(id: str):
         if f.endswith(".jpg")
     ]
 
-    relatorio = d.get("relatorio_ai","")
-    relatorio = re.sub(r"📑 (.+)", r"<h2>\\1</h2>", relatorio)
-    relatorio = re.sub(r"I\\. (.+)", r"<h3>\\1</h3>", relatorio)
-    relatorio = re.sub(r"II\\. (.+)", r"<h3>\\1</h3>", relatorio)
-    relatorio = re.sub(r"III\\. (.+)", r"<h3>\\1</h3>", relatorio)
-    relatorio = re.sub(r"IV\\. (.+)", r"<h3>\\1</h3>", relatorio)
-    relatorio = relatorio.replace("\\n", "<br>")
-
     html = f"""
     <html>
     <head>
         <style>
             body {{
-                font-family: 'Segoe UI';
-                background: linear-gradient(135deg, #0f2f2f, #1e4d4d);
+                font-family: Arial;
+                background: #ececec;
                 padding: 30px;
-                color: #fff;
+                color: #111;
             }}
 
             .container {{
@@ -487,32 +479,17 @@ def cliente(id: str):
             }}
 
             .card {{
-                background: rgba(255,255,255,0.05);
+                background: #fff;
                 padding: 25px;
                 margin-bottom: 20px;
                 border-radius: 16px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                border-left: 6px solid #111;
             }}
 
-            h2 {{
+            h2, h3 {{
                 text-align: center;
-                color: #d4af37;
-            }}
-
-            h3 {{
-                color: #00e0b8;
-                margin-top: 20px;
-            }}
-
-            .selo {{
-                text-align: center;
-                font-size: 20px;
                 font-weight: bold;
-                color: #00ffae;
-                border: 2px solid #00ffae;
-                padding: 10px;
-                border-radius: 10px;
-                margin-top: 15px;
             }}
 
             .info {{
@@ -533,9 +510,13 @@ def cliente(id: str):
                 border-radius: 10px;
             }}
 
-            .relatorio {{
-                line-height: 1.7;
-                font-size: 15px;
+            pre {{
+                background: #f4f4f4;
+                padding: 18px;
+                border-radius: 12px;
+                white-space: pre-wrap;
+                font-size: 14px;
+                line-height: 1.6;
             }}
         </style>
     </head>
@@ -544,7 +525,7 @@ def cliente(id: str):
     <div class="container">
 
         <div class="card">
-            <h2>🏁 LAUDO TÉCNICO PROFISSIONAL</h2>
+            <h2>🏁 LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h2>
             <div class="info">
                 <b>{d.get("nome")}</b><br>
                 {d.get("telefone")}<br>
@@ -552,8 +533,6 @@ def cliente(id: str):
                 {d.get("data")}<br>
                 ID: <b>{d.get("id")}</b>
             </div>
-
-            <div class="selo">✔ APROVADO</div>
         </div>
 
         <div class="card">
@@ -568,8 +547,9 @@ def cliente(id: str):
             </div>
         </div>
 
-        <div class="card relatorio">
-            {relatorio}
+        <div class="card">
+            <h3>🤖 RELATÓRIO TÉCNICO</h3>
+            <pre>{d.get("relatorio_ai","")}</pre>
         </div>
 
         <div class="card">
