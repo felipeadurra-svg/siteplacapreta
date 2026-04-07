@@ -14,6 +14,11 @@ const PaymentPage = ({
   isProcessing,
 }: PaymentPageProps) => {
   const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [copied, setCopied] = useState(false);
+
+  // 🔥 SEU PIX REAL (COPIA E COLA)
+  const pixCode =
+    "00020126440014br.gov.bcb.pix0122felipeadurra@yahoo.com520400005303986540597.005802BR5921Regina Lima de Arruda6009Sao Paulo62240520daqr32365891044901696304A7AF";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,6 +34,12 @@ const PaymentPage = ({
     return `${m.toString().padStart(2, "0")}:${r
       .toString()
       .padStart(2, "0")}`;
+  };
+
+  const copyPix = async () => {
+    await navigator.clipboard.writeText(pixCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -75,7 +86,7 @@ const PaymentPage = ({
         </div>
       </div>
 
-      {/* 🔥 CARD PIX (AGORA ACIMA DOS BOTÕES) */}
+      {/* 🔥 CARD PIX */}
       <div className="bg-card border border-border rounded-xl p-6 mb-6">
 
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
@@ -87,6 +98,7 @@ const PaymentPage = ({
           Expira em {formatTime(timeLeft)}
         </div>
 
+        {/* QR CODE */}
         <div className="flex justify-center mb-4">
           <div className="p-3 bg-white rounded-lg">
             <img
@@ -97,12 +109,34 @@ const PaymentPage = ({
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Escaneie com o app do seu banco para realizar o pagamento
+        {/* 🔥 COPIA E COLA */}
+        <div className="mt-4">
+          <p className="text-xs text-muted-foreground mb-2">
+            Pix copia e cola:
+          </p>
+
+          <div className="flex items-center gap-2">
+            <input
+              value={pixCode}
+              readOnly
+              className="flex-1 p-2 text-xs border rounded bg-muted"
+            />
+
+            <button
+              onClick={copyPix}
+              className="px-3 py-2 text-xs bg-primary text-white rounded"
+            >
+              {copied ? "Copiado!" : "Copiar"}
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground mt-3">
+          Escaneie ou copie o código para pagar no app do seu banco
         </p>
       </div>
 
-      {/* BOTÕES (AGORA DEPOIS DO QR CODE) */}
+      {/* BOTÕES */}
       <Button
         variant="gold"
         size="lg"
