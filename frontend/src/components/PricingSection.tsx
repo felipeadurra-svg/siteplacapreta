@@ -54,7 +54,7 @@ const PricingSection = () => {
             <div className="text-center mb-8 mt-4">
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-sm text-muted-foreground">R$</span>
-                <span className="font-heading text-5xl font-bold text-gradient-gold">197</span>
+                <span className="font-heading text-5xl font-bold text-gradient-gold">97</span>
                 <span className="text-sm text-muted-foreground">,00</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">Pagamento único</p>
