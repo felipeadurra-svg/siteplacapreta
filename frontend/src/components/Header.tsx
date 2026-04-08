@@ -13,8 +13,7 @@ const Header = () => {
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">Início</Link>
           <Link to="/avaliacao" className="text-sm text-muted-foreground hover:text-primary transition-colors">Avaliação</Link>
-          <Link to="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Admin</Link>
-        </nav>
+          </nav>
         <Link to="/avaliacao">
           <Button variant="gold" size="sm">Iniciar Avaliação</Button>
         </Link>
