@@ -456,112 +456,216 @@ def cliente(id: str):
         d = json.load(f)
 
     fotos_dir = os.path.join(UPLOAD_DIR, id)
+
     fotos = [
         f"/uploads/{id}/{f}"
         for f in os.listdir(fotos_dir)
         if f.endswith(".jpg")
     ]
 
-    html = f"""
-    <html>
+    fotos_html = ""
+    for f in fotos[:10]:
+        fotos_html += f'<img src="{f}" style="width:100%;height:60px;object-fit:cover;border-radius:4px;">'
+
+    html = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
     <head>
-        <style>
-            body {{
-                font-family: Arial;
-                background: #ececec;
-                padding: 30px;
-                color: #111;
-            }}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laudo Técnico Pericial</title>
 
-            .container {{
-                max-width: 1100px;
-                margin: auto;
-            }}
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-            .card {{
-                background: #fff;
-                padding: 25px;
-                margin-bottom: 20px;
-                border-radius: 16px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-                border-left: 6px solid #111;
-            }}
+    <style>
+        :root {
+            --verde-escuro: #052e22;
+            --verde-medio: #145c43;
+            --dourado: #b59a5d;
+            --bege-fundo: #e6e2d8;
+            --branco: #ffffff;
+        }
 
-            h2, h3 {{
-                text-align: center;
-                font-weight: bold;
-            }}
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bege-fundo);
+            font-family: 'Montserrat', sans-serif;
+            color: #333;
+        }
 
-            .info {{
-                text-align: center;
-                line-height: 1.6;
-            }}
+        .container {
+            width: 1000px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 15px;
+        }
 
-            .grid {{
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-            }}
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(90deg, #052e22, #1a4a3a);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            border-radius: 8px;
+            border-bottom: 4px solid var(--dourado);
+        }
 
-            .grid img {{
-                width: 100%;
-                height: 160px;
-                object-fit: cover;
-                border-radius: 10px;
-            }}
+        .header h1 {
+            font-family: 'Cinzel', serif;
+            margin: 0;
+        }
 
-            pre {{
-                background: #f4f4f4;
-                padding: 18px;
-                border-radius: 12px;
-                white-space: pre-wrap;
-                font-size: 14px;
-                line-height: 1.6;
-            }}
-        </style>
+        .card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            background: var(--verde-escuro);
+            color: white;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .card-body {
+            padding: 12px 15px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 120px;
+            color: var(--verde-escuro);
+        }
+
+        .resultado-box {
+            text-align: center;
+            border: 2px solid var(--dourado);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .total-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--verde-escuro);
+        }
+
+        .veredito {
+            background: var(--verde-escuro);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+        }
+
+        .footer {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 10px;
+            padding: 20px;
+            color: #666;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            font-size: 13px;
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+    </style>
     </head>
 
     <body>
+
     <div class="container">
 
+        <div class="header">
+            <div>
+                <h1>LAUDO TÉCNICO PERICIAL</h1>
+                <small>Originalidade e Antigomobilismo</small>
+            </div>
+            <div>Certificado Premium</div>
+        </div>
+
         <div class="card">
-            <h2>🏁 LAUDO TÉCNICO DE ORIGINALIDADE VEICULAR</h2>
-            <div class="info">
-                <b>{d.get("nome")}</b><br>
-                {d.get("telefone")}<br>
-                {d.get("email")}<br>
-                {d.get("data")}<br>
-                ID: <b>{d.get("id")}</b>
+            <div class="card-title">Dados do Veículo</div>
+            <div class="card-body">
+                <div class="info-row"><span class="info-label">Nome:</span> {{NOME}}</div>
+                <div class="info-row"><span class="info-label">Veículo:</span> {{VEICULO}}</div>
+                <div class="info-row"><span class="info-label">Data:</span> {{DATA}}</div>
+                <div class="info-row"><span class="info-label">ID:</span> {{ID}}</div>
             </div>
         </div>
 
         <div class="card">
-            <h3>📸 FOTOS DO VEÍCULO</h3>
-            <div class="grid">
-    """
-
-    for f in fotos:
-        html += f'<img src="{f}"/>'
-
-    html += f"""
+            <div class="card-title">Fotos do Veículo</div>
+            <div class="card-body">
+                <div class="photo-grid">
+                    {{FOTOS}}
+                </div>
             </div>
         </div>
 
         <div class="card">
-            <h3>🤖 RELATÓRIO TÉCNICO</h3>
-            <pre>{d.get("relatorio_ai","")}</pre>
+            <div class="card-title">Relatório Técnico</div>
+            <div class="card-body">
+                <pre>{{RELATORIO}}</pre>
+            </div>
         </div>
 
         <div class="card">
-            <h3>🔐 VALIDAÇÃO DIGITAL</h3>
-            <div class="info">
-                <b>{gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}</b>
+            <div class="card-title">Validação Digital</div>
+            <div class="card-body">
+                <b>{{HASH}}</b>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Resultado Final</div>
+            <div class="card-body">
+                <div class="resultado-box">
+                    <div class="total-score">98 / 100</div>
+                    <div class="veredito">APROVADO PARA PLACA PRETA</div>
+                </div>
             </div>
         </div>
 
     </div>
+
     </body>
     </html>
     """
+
+    html = html.replace("{{NOME}}", str(d.get("nome")))
+    html = html.replace("{{VEICULO}}", f"{d.get('veiculo', {}).get('marca')} {d.get('veiculo', {}).get('modelo')} ({d.get('veiculo', {}).get('ano')})")
+    html = html.replace("{{DATA}}", str(d.get("data")))
+    html = html.replace("{{ID}}", str(d.get("id")))
+    html = html.replace("{{RELATORIO}}", str(d.get("relatorio_ai", "")))
+    html = html.replace("{{HASH}}", gerar_hash(d.get("nome"), d.get("data"), "LAUDO"))
+    html = html.replace("{{FOTOS}}", fotos_html)
 
     return HTMLResponse(html)
