@@ -324,34 +324,46 @@ def cliente(id: str):
 
     texto = d.get("relatorio_ai", "")
 
-    def extrair(inicio, fim, original):
+    # NOVA FUNÇÃO DE EXTRAÇÃO BLINDADA: 
+    # Ela busca pelas palavras-chave ignorando emojis e formatações rígidas
+    def extrair_flexivel(palavra_chave, proxima_palavra, original):
         try:
-            pattern = f"{re.escape(inicio)}(.*?){re.escape(fim)}"
-            match = re.search(pattern, original, re.DOTALL | re.IGNORECASE)
-            return match.group(1).strip() if match else "Dados não identificados."
-        except: return "Erro na extração"
+            # Busca o conteúdo entre a palavra atual e a próxima seção
+            padrao = f"{palavra_chave}.*?(?={proxima_palavra}|$)"
+            match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
+            if match:
+                # Remove o título da seção do resultado para ficar limpo
+                limpo = re.sub(f"^{palavra_chave}.*?\n", "", match.group(0), flags=re.IGNORECASE | re.DOTALL)
+                return limpo.strip()
+            return "Dados não localizados na análise visual."
+        except: 
+            return "Erro ao processar seção."
 
-    # Fatiamento por Regex baseado no seu Prompt
-    sec_ident = extrair("📌 IDENTIFICAÇÃO DO VEÍCULO", "I. 🚗 EXTERIOR", texto)
-    sec_ext = extrair("I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)", "II. 🪑 INTERIOR", texto)
-    sec_int = extrair("II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)", "III. 🧰 MECÂNICA", texto)
-    sec_mec = extrair("III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)", "IV. 🧼 CONSERVAÇÃO", texto)
-    sec_cons = extrair("IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)", "📊 RESULTADO FINAL", texto)
-    sec_recom = extrair("🧠 RECOMENDAÇÕES", "✍️ ASSINATURA", texto)
+    # Fatiamento usando palavras-chave do seu prompt
+    sec_ident = extrair_flexivel("IDENTIFICAÇÃO DO VEÍCULO", "I. EXTERIOR", texto)
+    sec_ext = extrair_flexivel("EXTERIOR E CARROCERIA", "II. INTERIOR", texto)
+    sec_int = extrair_flexivel("INTERIOR E TAPEÇARIA", "III. MECÂNICA", texto)
+    sec_mec = extrair_flexivel("MECÂNICA VISUAL", "IV. CONSERVAÇÃO", texto)
+    sec_cons = extrair_flexivel("CONSERVAÇÃO GERAL", "RESULTADO FINAL", texto)
+    sec_recom = extrair_flexivel("RECOMENDAÇÕES", "ASSINATURA", texto)
 
-    score = re.search(r"TOTAL:\s*(\d+)", texto)
-    score = score.group(1) if score else "00"
+    # Captura de Score e Veredito
+    score_match = re.search(r"TOTAL:\s*(\d+)", texto)
+    score = score_match.group(1) if score_match else "00"
     veredito = "APROVADO" if "APROVADO" in texto.upper() else "EM ANÁLISE"
     
-    v_rapida = re.search(r"💸 Venda rápida:\s*(.*)", texto)
-    v_part = re.search(r"💰 Mercado particular:\s*(.*)", texto)
-    v_pos = re.search(r"🏆 Pós placa preta:\s*(.*)", texto)
+    # Captura de Mercado
+    v_rapida = re.search(r"Venda rápida:?\s*(.*)", texto, re.IGNORECASE)
+    v_part = re.search(r"Mercado particular:?\s*(.*)", texto, re.IGNORECASE)
+    v_pos = re.search(r"Pós placa preta:?\s*(.*)", texto, re.IGNORECASE)
 
+    # Registro Fotográfico
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else f"/uploads/{id}/{arquivos}" if arquivos else ""
     fotos_html = "".join([f'<div class="img-mini" style="background-image:url(\'/uploads/{id}/{f}\')"></div>' for f in arquivos])
 
+    # O HTML permanece o mesmo design que você aprovou
     return f"""
     <!DOCTYPE html>
     <html lang="pt-br">
