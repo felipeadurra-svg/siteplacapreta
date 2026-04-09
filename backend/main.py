@@ -14,7 +14,7 @@ import re
 
 app = FastAPI()
 
-# Configuração da OpenAI
+# 🔑 Configuração da OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = "gpt-4o"
 
@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📁 Configuração de Diretorios
+# 📁 Configuração de Diretórios
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
@@ -35,11 +35,13 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 def salvar_imagem(file: UploadFile, path: str):
     if not file: return None
-    content = file.file.read()
-    if not content: return None
-    with open(path, "wb") as f:
-        f.write(content)
-    return path
+    try:
+        content = file.file.read()
+        if not content: return None
+        with open(path, "wb") as f:
+            f.write(content)
+        return path
+    except: return None
 
 
 def to_base64(path):
@@ -48,7 +50,7 @@ def to_base64(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# 🧠 PROMPT ABSOLUTAMENTE INTACTO
+# 🧠 PROMPT ABSOLUTAMENTE INTACTO CONFORME SOLICITADO
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -159,6 +161,7 @@ IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
 Avaliar:
 - estrutura aparente
 - borrachas
+- profissionalismo e cuidado
 - desgaste natural compatível
 
 📌 Apresentar observações técnicas
@@ -222,7 +225,8 @@ Perito Automotivo em Antigomobilismo
 Sistema de Avaliação de Originalidade
 """
 
-def gerar_relatorio(fotos, dados_veiculo):
+
+def gerar_relatorio(fotos):
     imgs = []
     for _, path in fotos.items():
         if not path or not os.path.exists(path): continue
@@ -239,6 +243,8 @@ def gerar_relatorio(fotos, dados_veiculo):
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
+
+# 📥 ROTA DE ENVIO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None), marca: Optional[str] = Form(None), 
@@ -263,7 +269,7 @@ async def avaliacao(
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
     }
 
-    relatorio = gerar_relatorio(fotos_map, {"modelo": modelo})
+    relatorio = gerar_relatorio(fotos_map)
     
     dados = {
         "nome": nome, "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
@@ -276,25 +282,56 @@ async def avaliacao(
 
     return {"ok": True, "id": cliente_id}
 
+
+# 📊 DASHBOARD (RESTAURADO)
+@app.get("/avaliacoes", response_class=HTMLResponse)
+def avaliacoes():
+    clientes = []
+    if os.path.exists(UPLOAD_DIR):
+        for pasta in os.listdir(UPLOAD_DIR):
+            path = os.path.join(UPLOAD_DIR, pasta, "dados.json")
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    clientes.append((pasta, json.load(f)))
+    
+    clientes.reverse()
+
+    html = """<html><head><meta charset="UTF-8"><style>
+        body { font-family: sans-serif; background: #f2f2f2; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #052e22; color: #fff; border-radius: 6px; text-decoration: none; }
+    </style></head><body><h1>Dashboard de Avaliações</h1><div class="grid">"""
+
+    for id_, d in clientes:
+        v = d.get("veiculo", {})
+        html += f"""<div class="card"><b>{d.get('nome')}</b><br>
+        🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
+        <a class="btn" href="/cliente/{id_}">Ver Laudo Técnico →</a></div>"""
+    
+    html += "</div></body></html>"
+    return HTMLResponse(html)
+
+
+# 👤 CLIENTE (LAUDO DESIGN PREMIUM)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
-    if not os.path.exists(path): return HTMLResponse("Laudo não encontrado.")
+    if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
 
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
     texto = d.get("relatorio_ai", "")
 
-    # Função para extrair seções baseadas nos cabeçalhos exatos do seu prompt
     def extrair(inicio, fim, original):
         try:
             pattern = f"{re.escape(inicio)}(.*?){re.escape(fim)}"
             match = re.search(pattern, original, re.DOTALL | re.IGNORECASE)
-            return match.group(1).strip() if match else "Dados não identificados nesta seção."
+            return match.group(1).strip() if match else "Dados não identificados."
         except: return "Erro na extração"
 
-    # Fatiamento do texto seguindo o seu prompt
+    # Fatiamento por Regex baseado no seu Prompt
     sec_ident = extrair("📌 IDENTIFICAÇÃO DO VEÍCULO", "I. 🚗 EXTERIOR", texto)
     sec_ext = extrair("I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)", "II. 🪑 INTERIOR", texto)
     sec_int = extrair("II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)", "III. 🧰 MECÂNICA", texto)
@@ -302,17 +339,14 @@ def cliente(id: str):
     sec_cons = extrair("IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)", "📊 RESULTADO FINAL", texto)
     sec_recom = extrair("🧠 RECOMENDAÇÕES", "✍️ ASSINATURA", texto)
 
-    # Captura de Score e Mercado
     score = re.search(r"TOTAL:\s*(\d+)", texto)
     score = score.group(1) if score else "00"
-    
     veredito = "APROVADO" if "APROVADO" in texto.upper() else "EM ANÁLISE"
     
     v_rapida = re.search(r"💸 Venda rápida:\s*(.*)", texto)
     v_part = re.search(r"💰 Mercado particular:\s*(.*)", texto)
     v_pos = re.search(r"🏆 Pós placa preta:\s*(.*)", texto)
 
-    # Fotos
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else f"/uploads/{id}/{arquivos}" if arquivos else ""
@@ -329,25 +363,19 @@ def cliente(id: str):
             :root {{ --dark: #052e22; --gold: #b59a5d; --bg: #e6e2d8; --white: #ffffff; }}
             body {{ font-family: 'Montserrat', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }}
             .container {{ width: 1000px; margin: auto; display: grid; grid-template-columns: 1.8fr 1fr; gap: 20px; }}
-            
             .header {{ grid-column: 1/-1; background: var(--dark); color: white; padding: 25px; border-radius: 8px; border-bottom: 5px solid var(--gold); display: flex; justify-content: space-between; align-items: center; }}
             .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 30px; letter-spacing: 2px; }}
-
-            .card {{ background: var(--white); border-radius: 8px; margin-bottom: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #ddd; }}
-            .card-header {{ background: var(--dark); color: white; padding: 10px 15px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }}
+            .card {{ background: var(--white); border-radius: 8px; margin-bottom: 15px; overflow: hidden; border: 1px solid #ddd; }}
+            .card-header {{ background: var(--dark); color: white; padding: 10px 15px; font-weight: bold; font-size: 13px; text-transform: uppercase; }}
             .card-body {{ padding: 15px; line-height: 1.6; font-size: 13px; }}
-
             .score-box {{ background: var(--white); border: 3px solid var(--gold); border-radius: 8px; padding: 25px; text-align: center; margin-bottom: 20px; }}
-            .score-title {{ font-family: 'Cinzel', serif; color: var(--dark); font-weight: bold; font-size: 16px; }}
             .score-num {{ font-size: 60px; font-weight: 800; color: var(--dark); margin: 10px 0; }}
-            .veredito {{ background: var(--dark); color: white; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 14px; text-transform: uppercase; }}
-
+            .veredito {{ background: var(--dark); color: white; padding: 12px; border-radius: 6px; font-weight: bold; text-transform: uppercase; }}
             .mercado-item {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ccc; }}
             .photo-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }}
             .img-mini {{ height: 100px; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid #ddd; }}
-            
-            .main-img {{ height: 260px; background: #eee url('{foto_capa}') center/cover; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ccc; }}
-            pre {{ white-space: pre-wrap; font-family: 'Montserrat', sans-serif; margin: 0; color: #444; }}
+            .main-img {{ height: 260px; background: #eee url('{foto_capa}') center/cover; border-radius: 8px; margin-bottom: 20px; }}
+            pre {{ white-space: pre-wrap; font-family: inherit; margin: 0; }}
             .footer {{ grid-column: 1/-1; text-align: center; font-size: 10px; padding: 30px; color: #777; }}
         </style>
     </head>
@@ -357,76 +385,32 @@ def cliente(id: str):
                 <div><h1>LAUDO TÉCNICO PERICIAL</h1><span>ORIGINALIDADE E ANTIGOMOBILISMO</span></div>
                 <div style="text-align: right; font-size: 12px;">ID: {id}<br>EMISSÃO: {d['data']}</div>
             </header>
-
             <div class="left-col">
-                <div class="card">
-                    <div class="card-header">● DADOS E IDENTIFICAÇÃO</div>
-                    <div class="card-body">
-                        <b>PROPRIETÁRIO:</b> {d['nome']}<br>
-                        <pre>{sec_ident}</pre>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">I. 🚗 EXTERIOR E CARROCERIA</div>
-                    <div class="card-body"><pre>{sec_ext}</pre></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">II. 🪑 INTERIOR E TAPEÇARIA</div>
-                    <div class="card-body"><pre>{sec_int}</pre></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">III. 🧰 MECÂNICA VISUAL / COFRE</div>
-                    <div class="card-body"><pre>{sec_mec}</pre></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">IV. 🧼 CONSERVAÇÃO GERAL</div>
-                    <div class="card-body"><pre>{sec_cons}</pre></div>
-                </div>
-
-                <div class="card" style="border-left: 6px solid var(--dark);">
-                    <div class="card-header">🧠 RECOMENDAÇÕES DO PERITO</div>
-                    <div class="card-body"><pre>{sec_recom}</pre></div>
-                </div>
+                <div class="card"><div class="card-header">● DADOS E IDENTIFICAÇÃO</div><div class="card-body"><b>PROPRIETÁRIO:</b> {d['nome']}<br><pre>{sec_ident}</pre></div></div>
+                <div class="card"><div class="card-header">I. EXTERIOR E CARROCERIA</div><div class="card-body"><pre>{sec_ext}</pre></div></div>
+                <div class="card"><div class="card-header">II. INTERIOR E TAPEÇARIA</div><div class="card-body"><pre>{sec_int}</pre></div></div>
+                <div class="card"><div class="card-header">III. MECÂNICA VISUAL</div><div class="card-body"><pre>{sec_mec}</pre></div></div>
+                <div class="card"><div class="card-header">IV. CONSERVAÇÃO GERAL</div><div class="card-body"><pre>{sec_cons}</pre></div></div>
+                <div class="card" style="border-left: 6px solid var(--dark);"><div class="card-header">🧠 RECOMENDAÇÕES</div><div class="card-body"><pre>{sec_recom}</pre></div></div>
             </div>
-
             <div class="right-col">
                 <div class="main-img"></div>
-                
                 <div class="score-box">
-                    <div class="score-title">PONTUAÇÃO FINAL</div>
+                    <div style="font-family: Cinzel; color: var(--dark);">PONTUAÇÃO FINAL</div>
                     <div class="score-num">{score}<span style="font-size: 20px; color: #999;">/100</span></div>
                     <div class="veredito">{veredito} PARA PLACA PRETA</div>
                 </div>
-
                 <div class="card">
-                    <div class="card-header">💰 ANÁLISE DE MERCADO (BRL)</div>
+                    <div class="card-header">💰 ANÁLISE DE MERCADO</div>
                     <div class="card-body">
                         <div class="mercado-item"><span>Venda Rápida:</span> <b>{v_rapida.group(1) if v_rapida else "---"}</b></div>
                         <div class="mercado-item"><span>Particular:</span> <b>{v_part.group(1) if v_part else "---"}</b></div>
-                        <div class="mercado-item"><span>Pós Placa Preta:</span> <b>{v_pos.group(1) if v_pos else "---"}</b></div>
+                        <div class="mercado-item"><span>Pós Placa:</span> <b>{v_pos.group(1) if v_pos else "---"}</b></div>
                     </div>
                 </div>
-
-                <div class="card">
-                    <div class="card-header">📷 REGISTRO FOTOGRÁFICO</div>
-                    <div class="card-body">
-                        <div class="photo-grid">{fotos_html}</div>
-                    </div>
-                </div>
-                
-                <div style="text-align: center; margin-top: 20px;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" width="80" style="opacity: 0.5;">
-                    <p style="font-size: 9px; color: #999;">Validação Digital via QR Code</p>
-                </div>
+                <div class="card"><div class="card-header">📷 REGISTRO FOTOGRÁFICO</div><div class="card-body"><div class="photo-grid">{fotos_html}</div></div></div>
             </div>
-
-            <footer class="footer">
-                SISTEMA DE AVALIAÇÃO DE ORIGINALIDADE • LAUDO GERADO EM {datetime.now().year} • DOCUMENTO PARA FINS DE CONSULTA
-            </footer>
+            <footer class="footer">SISTEMA DE AVALIAÇÃO DE ORIGINALIDADE • {datetime.now().year}</footer>
         </div>
     </body>
     </html>
