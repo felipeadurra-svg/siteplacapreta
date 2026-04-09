@@ -143,7 +143,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices.message.content
+        return response.choices[0].message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
