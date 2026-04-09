@@ -241,18 +241,32 @@ Sistema de Avaliação de Originalidade
 def gerar_relatorio(fotos, dados):
     imgs = []
     for _, path in fotos.items():
-        if not path: continue
+        if not path or not os.path.exists(path): continue
         b64 = to_base64(path)
         if not b64: continue
-        imgs.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+        imgs.append({
+            "type": "image_url", 
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+        })
 
     prompt = gerar_prompt()
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, *imgs]}],
-        temperature=0.1
-    )
-    return response.choices.message.content
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{
+                "role": "user", 
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *imgs
+                ]
+            }],
+            temperature=0.1
+        )
+        # CORREÇÃO AQUI: Acessando o conteúdo de forma segura
+        return response.choices.message.content
+    except Exception as e:
+        return f"Erro ao processar IA: {str(e)}"
 
 
 # 📥 AVALIAÇÃO
