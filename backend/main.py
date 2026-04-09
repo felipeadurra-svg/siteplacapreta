@@ -10,15 +10,12 @@ import os
 import uuid
 import json
 import base64
-import hashlib
 
 app = FastAPI()
 
-# 🔑 Configuração da OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = "gpt-4o"
 
-# 🌍 Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,12 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📁 Gerenciamento de Pastas
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# --- FUNÇÕES AUXILIARES ---
+# ------------------ FUNÇÕES ------------------
 
 def salvar_imagem(file: UploadFile, path: str):
     if not file:
@@ -50,188 +46,39 @@ def to_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-def gerar_hash(nome, data, nota):
-    raw = f"{nome}-{data}-{nota}".encode()
-    return hashlib.md5(raw).hexdigest()
-
-# --- PROMPT ORIGINAL (ABSOLUTAMENTE INTACTO) ---
+# ------------------ PROMPT ------------------
 
 def gerar_prompt():
     return """
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+Você é um perito automotivo.
 
-Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+⚠️ REGRAS:
+- NÃO gerar texto livre
+- NÃO criar relatório
+- NÃO criar layout
+- NÃO escrever nada fora do JSON
 
-⚠️ REGRAS CRÍTICAS:
-- NÃO inventar peças não visíveis
-- NÃO inferir itens fora do campo visual
-- NÃO usar fórmulas, pesos ou cálculos
-- NÃO mostrar lógica interna de pontuação
-- Linguagem técnica estilo clube de antigomobilismo
-- Base exclusivamente em evidência visual
-- PROIBIDO desconto sem justificativa técnica clara
-- PROIBIDO análise de mercado sem valores em R$
+Sua única função é analisar imagens e retornar JSON:
 
-────────────────────────────────────────
-
-⚖️ REGRA DE PONTUAÇÃO (OBRIGATÓRIA)
-
-A avaliação deve ser CONSERVADORA e JUSTA.
-
-- A pontuação deve priorizar notas altas quando não houver evidência clara de problema
-- Descontos devem ser MÍNIMOS e proporcionais
-
-📌 Diretrizes de desconto:
-- Pequenas inconsistências visuais → desconto de 1 ponto
-- Problemas moderados visíveis → até 2 pontos
-- Problemas evidentes e claros → até 3 pontos (máximo por item)
-
-❗ REGRA PRINCIPAL:
-Se não houver evidência visual clara → NÃO DESCONTAR
-
-📌 OBRIGATÓRIO:
-Todo desconto deve vir acompanhado de justificativa técnica objetiva
-
-Formato obrigatório:
-“Redução de X ponto(s) devido a [descrição objetiva do que é visível]”
-
-Exemplo:
-“Redução de 1 ponto devido a leve desalinhamento visual entre capô e paralama”
-“Redução de 2 pontos devido a diferença de tonalidade indicando possível repintura”
-
-⚠️ PROIBIDO:
-- Descontar por suposição
-- Descontar por desgaste presumido
-- Descontos genéricos sem explicação
-
-────────────────────────────────────────
-
-📑 RELATÓRIO DE VISTORIA TÉCNICA DE ORIGINALIDADE
-
-📌 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano estimado
-- Geração
-- Confiança da análise (baixa / média / alta)
-
-────────────────────────────────────────
-
-I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
-
-Avaliar:
-- alinhamento de portas, capô e tampa
-- pintura (original / repintura / verniz moderno)
-- cromados e lanternas
-- rodas e pneus
-- sinais de restauração
-
-📌 Apresentar observações técnicas
-📌 Listar descontos (quando houver)
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
-
-Avaliar:
-- painel e instrumentação
-- volante
-- bancos e tecidos
-- forrações
-- conservação geral
-
-📌 Apresentar observações técnicas
-📌 Listar descontos (quando houver)
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
-
-Avaliar:
-- organização do cofre
-- fiação aparente
-- componentes originais visíveis
-- suspensão e rodas (aspecto visual)
-
-📌 Apresentar observações técnicas
-📌 Listar descontos (quando houver)
-📌 Subtotal: XX / 30
-
-────────────────────────────────────────
-
-IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
-
-Avaliar:
-- estrutura aparente
-- borrachas
-- desgaste natural compatível
-
-📌 Apresentar observações técnicas
-📌 Listar descontos (quando houver)
-📌 Subtotal: XX / 10
-
-────────────────────────────────────────
-
-📊 RESULTADO FINAL
-TOTAL: XX / 100
-
-────────────────────────────────────────
-
-🏁 VEREDITO FINAL
-APROVADO ou REPROVADO para placa preta
-
-────────────────────────────────────────
-
-💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
-
-A avaliação deve apresentar valores reais baseados no mercado brasileiro de veículos clássicos.
-
-Considerar:
-- estado visual observado
-- originalidade
-- conservação
-- demanda do modelo
-
-📌 Apresentar obrigatoriamente:
-
-💸 Venda rápida:
-R$ XXXXX a R$ XXXXX
-
-💰 Mercado particular:
-R$ XXXXX a R$ XXXXX
-
-🏆 Pós placa preta:
-R$ XXXXX a R$ XXXXX
-
-⚠️ PROIBIDO:
-- Não usar termos genéricos
-- Não omitir valores
-- Não usar outra moeda
-
-────────────────────────────────────────
-
-🧠 RECOMENDAÇÕES
-
-Baseadas exclusivamente nas imagens:
-
-- correções de originalidade
-- ajustes estéticos visíveis
-- melhorias para valorização
-- pontos necessários para aprovação em placa preta
-
-────────────────────────────────────────
-
-✍️ ASSINATURA
-
-Perito Automotivo em Antigomobilismo  
-Sistema de Avaliação de Originalidade
+{
+  "exterior": {"observacoes": "", "subtotal": 0},
+  "interior": {"observacoes": "", "subtotal": 0},
+  "mecanica": {"observacoes": "", "subtotal": 0},
+  "conservacao": {"observacoes": "", "subtotal": 0},
+  "total": 0,
+  "veredito": "",
+  "mercado": {
+    "venda_rapida": "",
+    "particular": "",
+    "pos_placa_preta": ""
+  },
+  "recomendacoes": []
+}
 """
 
-# --- 1. FUNÇÃO gerar_relatorio (CORRIGIDA) ---
+# ------------------ IA ------------------
 
-def gerar_relatorio(fotos, dados):
+def gerar_relatorio(fotos):
     imgs = []
     for _, path in fotos.items():
         if not path:
@@ -243,68 +90,47 @@ def gerar_relatorio(fotos, dados):
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
             })
 
-    prompt = gerar_prompt()
-
     response = client.chat.completions.create(
         model=MODEL,
         messages=[{
             "role": "user",
-            "content": [{"type": "text", "text": prompt}, *imgs]
+            "content": [{"type": "text", "text": gerar_prompt()}, *imgs]
         }],
         temperature=0.1
     )
 
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
 
-# --- ROTAS DA API ---
+    try:
+        return json.loads(content)
+    except:
+        return {"erro": content}
+
+# ------------------ POST ------------------
 
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
-    email: Optional[str] = Form(None),
-    telefone: Optional[str] = Form(None),
     marca: Optional[str] = Form(None),
     modelo: Optional[str] = Form(None),
     ano: Optional[str] = Form(None),
     foto_frente: Optional[UploadFile] = File(None),
     foto_traseira: Optional[UploadFile] = File(None),
-    foto_lateral_direita: Optional[UploadFile] = File(None),
-    foto_lateral_esquerda: Optional[UploadFile] = File(None),
-    foto_interior: Optional[UploadFile] = File(None),
-    foto_painel: Optional[UploadFile] = File(None),
-    foto_motor: Optional[UploadFile] = File(None),
-    foto_porta_malas: Optional[UploadFile] = File(None),
-    foto_chassi: Optional[UploadFile] = File(None),
-    foto_adicional: Optional[UploadFile] = File(None),
 ):
+
     cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
-    url_publica = f"/cliente/{cliente_id}"
-
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
-        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
-        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
-        "porta_malas": salvar_imagem(foto_porta_malas, f"{pasta}/porta_malas.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
     }
 
-    try:
-        relatorio = gerar_relatorio(fotos, {"marca": marca, "modelo": modelo})
-    except Exception as e:
-        relatorio = f"Erro na IA: {str(e)}"
+    relatorio = gerar_relatorio(fotos)
 
     dados = {
         "nome": nome,
-        "email": email,
-        "telefone": telefone,
         "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
         "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
         "id": cliente_id,
@@ -314,41 +140,48 @@ async def avaliacao(
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
-    return {"ok": True, "id": cliente_id, "url": url_publica}
+    return {"ok": True, "id": cliente_id}
+
+# ------------------ DASHBOARD ------------------
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def dashboard():
     clientes = []
+
     for pasta in os.listdir(UPLOAD_DIR):
         path = os.path.join(UPLOAD_DIR, pasta, "dados.json")
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 clientes.append(json.load(f))
-    
+
     clientes.reverse()
-    
+
     html = """
-    <html><head><style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f2f2f2; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-        .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 4px solid #145c42; }
-        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #111; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; }
-    </style></head><body>
-    <h1 style="color:#145c42">📋 Dashboard de Avaliações</h1>
-    <div class="grid">
+    <html>
+    <body style="font-family:Arial;padding:20px;background:#f2f2f2">
+    <h1>📊 Dashboard</h1>
     """
+
     for d in clientes:
-        v = d.get('veiculo', {})
+        r = d.get("relatorio_ai", {})
+
         html += f"""
-        <div class="card">
-            <div style="font-weight:bold; font-size:18px;">{d.get('nome')}</div>
-            <div style="font-size:14px; color:#555; margin: 5px 0;">🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})</div>
-            <div style="font-size:12px; color:#888;">📅 {d.get('data')}</div>
-            <a class="btn" href="/cliente/{d.get('id')}">Abrir laudo completo →</a>
+        <div style="background:#fff;padding:15px;margin-bottom:10px;border-radius:10px">
+            <b>{d.get('nome')}</b><br>
+            🚗 {d.get('veiculo')['marca']} {d.get('veiculo')['modelo']}<br>
+            📅 {d.get('data')}<br><br>
+
+            ⭐ Score: {r.get('total')}<br>
+            🏁 Veredito: {r.get('veredito')}<br><br>
+
+            <a href="/cliente/{d.get('id')}">Abrir Laudo</a>
         </div>
         """
-    html += "</div></body></html>"
+
+    html += "</body></html>"
     return HTMLResponse(html)
+
+# ------------------ LAUDO ------------------
 
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
@@ -359,77 +192,27 @@ def cliente(id: str):
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
-    relatorio = d.get("relatorio_ai", "")
-
-    # --- 2. EXTRAÇÃO DE SCORE (CORRIGIDA) ---
-    score = "—"
-    try:
-        if "TOTAL:" in relatorio:
-            parte = relatorio.split("TOTAL:")[1]
-            score = parte.split("/")[0].strip()
-    except:
-        pass
-
-    veredito_texto = "EM ANÁLISE"
-    if "APROVADO" in relatorio.upper(): veredito_texto = "APROVADO"
-    elif "REPROVADO" in relatorio.upper(): veredito_texto = "REPROVADO"
-
-    fotos_dir = os.path.join(UPLOAD_DIR, id)
-    fotos_html = "".join([f'<img src="/uploads/{id}/{f}"/>' for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
+    r = d.get("relatorio_ai", {})
 
     return f"""
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body {{ margin: 0; font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }}
-            .container {{ max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }}
-            .header {{ background: linear-gradient(90deg, #0f3d2e, #145c42); color: #d4af37; text-align: center; padding: 40px; }}
-            .info-bar {{ display: flex; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid #eee; background: #fafafa; font-size: 14px; }}
-            .photos {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 20px; }}
-            .photos img {{ width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }}
-            .content {{ display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; }}
-            .card {{ background: #fff; border-radius: 16px; padding: 25px; border: 1px solid #eee; margin-bottom: 20px; }}
-            .score-box {{ background: #145c42; color: #fff; text-align: center; padding: 40px; border-radius: 16px; }}
-            .score-box h1 {{ font-size: 72px; margin: 0; color: #d4af37; }}
-            .status-badge {{ background: #f7f5ef; border: 2px solid #d4af37; text-align: center; padding: 20px; border-radius: 16px; margin-top: 20px; color: #145c42; font-weight: bold; font-size: 20px; }}
-            .pre {{ white-space: pre-wrap; font-size: 15px; line-height: 1.8; color: #333; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1 style="margin:0">LAUDO TÉCNICO PERICIAL</h1>
-                <h2 style="margin:0; font-weight:300">ORIGINALIDADE E ANTIGOMOBILISMO</h2>
-            </div>
-            <div class="info-bar">
-                <div><b>PROPRIETÁRIO:</b> {d.get('nome')}<br><b>VEÍCULO:</b> {d.get('veiculo').get('marca')} {d.get('veiculo').get('modelo')}</div>
-                <div style="text-align:right">📅 {d.get('data')}<br>🆔 {d.get('id')}</div>
-            </div>
-            <div class="photos">{fotos_html}</div>
-            <div class="content">
-                <div>
-                    <div class="card">
-                        <h3 style="color:#145c42; border-bottom: 2px solid #eee; padding-bottom: 10px;">RELATÓRIO DE VISTORIA</h3>
-                        <div class="pre">{relatorio}</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="score-box">
-                        <p style="margin:0; opacity:0.8;">PONTUAÇÃO FINAL</p>
-                        <h1>{score}</h1>
-                        <p style="margin:0; opacity:0.8;">DE 100 PONTOS</p>
-                    </div>
-                    <div class="status-badge">
-                        <span style="display:block; font-size:14px; opacity:0.7;">VEREDITO:</span>
-                        {veredito_texto} PARA PLACA PRETA
-                    </div>
-                    <div style="text-align:center; margin-top:20px; font-family:monospace; font-size:11px; color:#888;">
-                        VALIDAÇÃO: {gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
+    <html><body style="font-family:Arial;padding:40px">
+
+    <h1>LAUDO COMPLETO</h1>
+
+    <h2>Exterior</h2>
+    <p>{r.get('exterior', {}).get('observacoes')}</p>
+
+    <h2>Interior</h2>
+    <p>{r.get('interior', {}).get('observacoes')}</p>
+
+    <h2>Mecânica</h2>
+    <p>{r.get('mecanica', {}).get('observacoes')}</p>
+
+    <h2>Conservação</h2>
+    <p>{r.get('conservacao', {}).get('observacoes')}</p>
+
+    <h1>Score: {r.get('total')}</h1>
+    <h1>{r.get('veredito')}</h1>
+
+    </body></html>
     """
