@@ -11,14 +11,14 @@ import uuid
 import json
 import base64
 import hashlib
+import re
 
 app = FastAPI()
 
-# 🔑 Configuração da OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = "gpt-4o"
 
-# 🌍 Configuração de CORS
+# 🌍 CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,35 +27,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📁 Gerenciamento de Pastas
+# 📁 uploads
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# --- FUNÇÕES AUXILIARES ---
 
+# 💾 salvar imagem
 def salvar_imagem(file: UploadFile, path: str):
     if not file:
         return None
     content = file.file.read()
     if not content:
         return None
+
     with open(path, "wb") as f:
         f.write(content)
+
     return path
 
+
+# 🧠 base64
 def to_base64(path):
     if not path or not os.path.exists(path):
         return None
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
+
+# 🔐 hash simples
 def gerar_hash(nome, data, nota):
     raw = f"{nome}-{data}-{nota}".encode()
     return hashlib.md5(raw).hexdigest()
 
-# --- PROMPT ORIGINAL (ABSOLUTAMENTE INTACTO) ---
 
+# 🧠 PROMPT (ABSOLUTAMENTE INTACTO CONFORME SOLICITADO)
 def gerar_prompt():
     return """
 Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
@@ -229,35 +236,40 @@ Perito Automotivo em Antigomobilismo
 Sistema de Avaliação de Originalidade
 """
 
-# --- 1. FUNÇÃO gerar_relatorio (CORRIGIDA) ---
 
+# 🤖 IA
 def gerar_relatorio(fotos, dados):
     imgs = []
     for _, path in fotos.items():
-        if not path:
-            continue
+        if not path or not os.path.exists(path): continue
         b64 = to_base64(path)
-        if b64:
-            imgs.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
-            })
+        if not b64: continue
+        imgs.append({
+            "type": "image_url", 
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+        })
 
     prompt = gerar_prompt()
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{
+                "role": "user", 
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *imgs
+                ]
+            }],
+            temperature=0.1
+        )
+        # CORREÇÃO AQUI: Acessando o conteúdo de forma segura.
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Erro ao processar IA: {str(e)}"
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[{
-            "role": "user",
-            "content": [{"type": "text", "text": prompt}, *imgs]
-        }],
-        temperature=0.1
-    )
 
-    return response.choices[0].message.content
-
-# --- ROTAS DA API ---
-
+# 📥 AVALIAÇÃO
 @app.post("/avaliacao")
 async def avaliacao(
     nome: Optional[str] = Form(None),
@@ -281,7 +293,12 @@ async def avaliacao(
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
 
-    url_publica = f"/cliente/{cliente_id}"
+    dados = {
+        "nome": nome, "email": email, "telefone": telefone,
+        "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
+        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
+        "id": cliente_id
+    }
 
     fotos = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
@@ -297,139 +314,164 @@ async def avaliacao(
     }
 
     try:
-        relatorio = gerar_relatorio(fotos, {"marca": marca, "modelo": modelo})
+        relatorio = gerar_relatorio(fotos, dados["veiculo"])
+        dados["relatorio_ai"] = relatorio
     except Exception as e:
-        relatorio = f"Erro na IA: {str(e)}"
-
-    dados = {
-        "nome": nome,
-        "email": email,
-        "telefone": telefone,
-        "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
-        "id": cliente_id,
-        "relatorio_ai": relatorio
-    }
+        dados["relatorio_ai"] = str(e)
 
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
-    return {"ok": True, "id": cliente_id, "url": url_publica}
+    return {"ok": True, "id": cliente_id}
 
+
+# 📊 DASHBOARD
 @app.get("/avaliacoes", response_class=HTMLResponse)
-def dashboard():
+def avaliacoes():
     clientes = []
     for pasta in os.listdir(UPLOAD_DIR):
         path = os.path.join(UPLOAD_DIR, pasta, "dados.json")
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                clientes.append(json.load(f))
-    
+                clientes.append((pasta, json.load(f)))
     clientes.reverse()
-    
-    html = """
-    <html><head><style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f2f2f2; padding: 20px; }
+
+    html = """<html><head><style>
+        body { font-family: Arial; background: #f2f2f2; padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-        .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 4px solid #145c42; }
-        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #111; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; }
-    </style></head><body>
-    <h1 style="color:#145c42">📋 Dashboard de Avaliações</h1>
-    <div class="grid">
-    """
-    for d in clientes:
-        v = d.get('veiculo', {})
-        html += f"""
-        <div class="card">
-            <div style="font-weight:bold; font-size:18px;">{d.get('nome')}</div>
-            <div style="font-size:14px; color:#555; margin: 5px 0;">🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})</div>
-            <div style="font-size:12px; color:#888;">📅 {d.get('data')}</div>
-            <a class="btn" href="/cliente/{d.get('id')}">Abrir laudo completo →</a>
-        </div>
-        """
+        .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .btn { display: inline-block; margin-top: 10px; padding: 10px 12px; background: #111; color: #fff; border-radius: 8px; text-decoration: none; font-size: 13px; }
+    </style></head><body><h1>Dashboard</h1><div class="grid">"""
+
+    for id_, d in clientes:
+        v = d.get("veiculo", {})
+        html += f"""<div class="card"><b>{d.get('nome')}</b><br>
+        🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
+        <a class="btn" href="/cliente/{id_}">Abrir laudo completo →</a></div>"""
+    
     html += "</div></body></html>"
     return HTMLResponse(html)
 
+
+# 👤 CLIENTE (COM O ESTILO DE DUAS COLUNAS SOLICITADO)
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
-    if not os.path.exists(path):
-        return HTMLResponse("Não encontrado")
+    if not os.path.exists(path): return HTMLResponse("Laudo não encontrado.")
 
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
-    relatorio = d.get("relatorio_ai", "")
+    relatorio_texto = d.get("relatorio_ai", "")
+    
+    # ⛏️ Extração de dados da IA para preencher os campos do layout
+    score_match = re.search(r"TOTAL:\s*(\d+)", relatorio_texto)
+    score = score_match.group(1) if score_match else "00"
+    
+    veredito = "APROVADO" if "APROVADO" in relatorio_texto.upper() else "EM ANÁLISE"
+    
+    # Capturar valores de mercado
+    v_rapida = re.search(r"Venda rápida:\s*(R\$\s*[\d\.\,kK\s-]+(a R\$\s*[\d\.\,kK\s-]+)?)", relatorio_texto)
+    v_particular = re.search(r"Mercado particular:\s*(R\$\s*[\d\.\,kK\s-]+(a R\$\s*[\d\.\,kK\s-]+)?)", relatorio_texto)
+    v_pos = re.search(r"Pós placa preta:\s*(R\$\s*[\d\.\,kK\s-]+(a R\$\s*[\d\.\,kK\s-]+)?)", relatorio_texto)
 
-    # --- 2. EXTRAÇÃO DE SCORE (CORRIGIDA) ---
-    score = "—"
-    try:
-        if "TOTAL:" in relatorio:
-            parte = relatorio.split("TOTAL:")[1]
-            score = parte.split("/")[0].strip()
-    except:
-        pass
-
-    veredito_texto = "EM ANÁLISE"
-    if "APROVADO" in relatorio.upper(): veredito_texto = "APROVADO"
-    elif "REPROVADO" in relatorio.upper(): veredito_texto = "REPROVADO"
-
+    # Fotos reais do diretório
     fotos_dir = os.path.join(UPLOAD_DIR, id)
-    fotos_html = "".join([f'<img src="/uploads/{id}/{f}"/>' for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
+    arquivos_fotos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
+    
+    foto_principal = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos_fotos else f"/uploads/{id}/{arquivos_fotos}" if arquivos_fotos else ""
+    
+    fotos_html = ""
+    for f in arquivos_fotos:
+        fotos_html += f'<div class="photo-box" style="background-image: url(\'/uploads/{id}/{f}\')"></div>'
 
-    return f"""
-    <html>
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="pt-br">
     <head>
-        <meta charset="UTF-8">
-        <style>
-            body {{ margin: 0; font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }}
-            .container {{ max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }}
-            .header {{ background: linear-gradient(90deg, #0f3d2e, #145c42); color: #d4af37; text-align: center; padding: 40px; }}
-            .info-bar {{ display: flex; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid #eee; background: #fafafa; font-size: 14px; }}
-            .photos {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 20px; }}
-            .photos img {{ width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }}
-            .content {{ display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 40px; }}
-            .card {{ background: #fff; border-radius: 16px; padding: 25px; border: 1px solid #eee; margin-bottom: 20px; }}
-            .score-box {{ background: #145c42; color: #fff; text-align: center; padding: 40px; border-radius: 16px; }}
-            .score-box h1 {{ font-size: 72px; margin: 0; color: #d4af37; }}
-            .status-badge {{ background: #f7f5ef; border: 2px solid #d4af37; text-align: center; padding: 20px; border-radius: 16px; margin-top: 20px; color: #145c42; font-weight: bold; font-size: 20px; }}
-            .pre {{ white-space: pre-wrap; font-size: 15px; line-height: 1.8; color: #333; }}
-        </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laudo Técnico - {d.get('veiculo',{}).get('modelo')}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {{ --verde-escuro: #052e22; --verde-medio: #145c43; --dourado: #b59a5d; --bege-fundo: #e6e2d8; --branco: #ffffff; }}
+        body {{ margin: 0; padding: 20px; background: var(--bege-fundo); font-family: 'Montserrat', sans-serif; color: #333; }}
+        .container {{ width: 1000px; margin: auto; display: grid; grid-template-columns: 1.8fr 1fr; gap: 15px; }}
+        .header {{ grid-column: 1 / -1; background: linear-gradient(90deg, #052e22, #1a4a3a); color: white; padding: 15px 25px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; border-bottom: 4px solid var(--dourado); }}
+        .header h1 {{ font-family: 'Cinzel', serif; font-size: 32px; margin: 0; letter-spacing: 2px; }}
+        .card {{ background: var(--branco); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }}
+        .card-title {{ background: var(--verde-escuro); color: var(--branco); padding: 8px 15px; font-size: 13px; font-weight: 700; text-transform: uppercase; }}
+        .card-body {{ padding: 12px 15px; position: relative; }}
+        .info-row {{ display: flex; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; font-size: 13px; }}
+        .info-label {{ font-weight: 700; width: 120px; color: var(--verde-escuro); }}
+        .resultado-box {{ text-align: center; border: 2px solid var(--dourado); padding: 15px; border-radius: 8px; background: white; }}
+        .total-score {{ font-size: 48px; font-weight: 800; color: var(--verde-escuro); margin: 5px 0; }}
+        .veradito-badge {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 6px; font-weight: 700; margin-top: 10px; }}
+        .mercado-item {{ display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #ccc; font-size: 12px; }}
+        .photo-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }}
+        .photo-box {{ background: #ddd; height: 80px; border-radius: 4px; background-size: cover; background-position: center; }}
+        pre {{ white-space: pre-wrap; font-family: inherit; font-size: 12px; line-height: 1.5; color: #444; background: #fafafa; padding: 10px; border-radius: 5px; }}
+        .footer {{ grid-column: 1 / -1; text-align: center; font-size: 10px; color: #666; padding: 20px; }}
+    </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1 style="margin:0">LAUDO TÉCNICO PERICIAL</h1>
-                <h2 style="margin:0; font-weight:300">ORIGINALIDADE E ANTIGOMOBILISMO</h2>
-            </div>
-            <div class="info-bar">
-                <div><b>PROPRIETÁRIO:</b> {d.get('nome')}<br><b>VEÍCULO:</b> {d.get('veiculo').get('marca')} {d.get('veiculo').get('modelo')}</div>
-                <div style="text-align:right">📅 {d.get('data')}<br>🆔 {d.get('id')}</div>
-            </div>
-            <div class="photos">{fotos_html}</div>
-            <div class="content">
-                <div>
-                    <div class="card">
-                        <h3 style="color:#145c42; border-bottom: 2px solid #eee; padding-bottom: 10px;">RELATÓRIO DE VISTORIA</h3>
-                        <div class="pre">{relatorio}</div>
-                    </div>
+    <div class="container">
+        <header class="header">
+            <div><h1>LAUDO TÉCNICO PERICIAL</h1><span>ORIGINALIDADE E ANTIGOMOBILISMO</span></div>
+            <div style="background: var(--dourado); color: white; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold;">CERTIFICADO PREMIUM</div>
+        </header>
+
+        <div class="left-col">
+            <div class="card">
+                <div class="card-title">● DADOS DO VEÍCULO</div>
+                <div class="card-body">
+                    <div class="info-row"><span class="info-label">PROPRIETÁRIO:</span> {d.get('nome')}</div>
+                    <div class="info-row"><span class="info-label">VEÍCULO:</span> {d.get('veiculo',{}).get('marca')} {d.get('veiculo',{}).get('modelo')} ({d.get('veiculo',{}).get('ano')})</div>
+                    <div class="info-row"><span class="info-label">DATA:</span> {d.get('data')}</div>
                 </div>
-                <div>
-                    <div class="score-box">
-                        <p style="margin:0; opacity:0.8;">PONTUAÇÃO FINAL</p>
-                        <h1>{score}</h1>
-                        <p style="margin:0; opacity:0.8;">DE 100 PONTOS</p>
-                    </div>
-                    <div class="status-badge">
-                        <span style="display:block; font-size:14px; opacity:0.7;">VEREDITO:</span>
-                        {veredito_texto} PARA PLACA PRETA
-                    </div>
-                    <div style="text-align:center; margin-top:20px; font-family:monospace; font-size:11px; color:#888;">
-                        VALIDAÇÃO: {gerar_hash(d.get("nome"), d.get("data"), "LAUDO")}
-                    </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">● RELATÓRIO DE VISTORIA DETALHADO</div>
+                <div class="card-body">
+                    <pre>{relatorio_texto}</pre>
                 </div>
             </div>
         </div>
+
+        <div class="right-col">
+            <div class="card">
+                <div style="height: 200px; background: #f0f0f0 url('{foto_principal}') center/cover no-repeat;">
+                    {"" if foto_principal else "[ Foto Principal ]"}
+                </div>
+            </div>
+
+            <div class="resultado-box">
+                <span style="font-family: 'Cinzel'; font-weight: bold; color: var(--verde-escuro);">PONTUAÇÃO FINAL</span>
+                <div class="total-score">{score} <span style="font-size: 20px; color: #999;">/ 100</span></div>
+                <div class="veradito-badge">{veredito} PARA PLACA PRETA</div>
+            </div>
+
+            <div class="card" style="margin-top: 15px;">
+                <div class="card-title">● ANÁLISE DE MERCADO (BRASIL)</div>
+                <div class="card-body">
+                    <div class="mercado-item"><span>Venda rápida:</span> <b>{v_rapida.group(1) if v_rapida else "Consulte Relatório"}</b></div>
+                    <div class="mercado-item"><span>Particular:</span> <b>{v_particular.group(1) if v_particular else "Consulte Relatório"}</b></div>
+                    <div class="mercado-item"><span>Pós Placa Preta:</span> <b>{v_pos.group(1) if v_pos else "Consulte Relatório"}</b></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">● FOTOS DO VEÍCULO ({len(arquivos_fotos)})</div>
+                <div class="card-body">
+                    <div class="photo-grid">{fotos_html}</div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">SISTEMA DE AVALIAÇÃO DE ORIGINALIDADE • LAUDO GERADO EM {datetime.now().year}</footer>
+    </div>
     </body>
     </html>
     """
+    return HTMLResponse(html_template)
