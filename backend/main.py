@@ -263,7 +263,7 @@ def gerar_relatorio(fotos, dados):
             }],
             temperature=0.1
         )
-        # CORREÇÃO AQUI: Acessando o conteúdo de forma segura
+        # CORREÇÃO AQUI: Acessando o conteúdo de forma segura.
         return response.choices[0].message.content
     except Exception as e:
         return f"Erro ao processar IA: {str(e)}"
