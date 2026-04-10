@@ -134,17 +134,16 @@ def gerar_relatorio_ai(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
 def renderizar_laudo_html(id_laudo, dados_json):
     analise_ia = dados_json.get("relatorio_ai", "")
     
-    # Extração via Regex para o novo Layout
+    # Extração via Regex
     def extrair_pontos(secao, texto):
-        # Ajustado para aceitar 1-, 2- ou I., II. conforme a resposta da IA
-        padrao = rf"(?:{secao}|{secao.split('-')[-1].strip()}).*?Subtotal:\s*(\d+/\d+)"
+        padrao = rf"{secao}.*?Subtotal:\s*(\d+/\d+)"
         match = re.search(padrao, texto, re.S | re.IGNORECASE)
         return match.group(1) if match else "0/30"
 
@@ -153,7 +152,6 @@ def renderizar_laudo_html(id_laudo, dados_json):
         match = re.search(padrao, texto, re.S | re.IGNORECASE)
         if match:
             content = match.group(1).strip()
-            # Remove o subtotal e o OBS do corpo principal para não duplicar
             content = re.sub(r"Subtotal:.*", "", content, flags=re.IGNORECASE)
             return content
         return "Análise técnica não disponível."
@@ -169,14 +167,20 @@ def renderizar_laudo_html(id_laudo, dados_json):
     score = (re.findall(r"TOTAL:\s*(\d+)", analise_ia) or ["0"])[-1]
     veredito = "APROVADO" if "APROVADO" in analise_ia.upper() else "REPROVADO"
     
-    # Recuperar URLs das fotos
+    # Busca de fotos no diretório
     fotos_dir = os.path.join(UPLOAD_DIR, id_laudo)
     fotos_urls = []
+    foto_capa = "https://via.placeholder.com/800x400"
+    
     if os.path.exists(fotos_dir):
         arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
         fotos_urls = [f"/uploads/{id_laudo}/{f}" for f in arquivos]
+        # Garante que a foto de frente seja a principal se existir
+        if "frente.jpg" in arquivos:
+            foto_capa = f"/uploads/{id_laudo}/frente.jpg"
+        elif fotos_urls:
+            foto_capa = fotos_urls
 
-    foto_capa = fotos_urls if fotos_urls else "https://via.placeholder.com/800x400"
     fotos_html = "".join([f'<div class="mini-foto"><img src="{url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"></div>' for url in fotos_urls[:10]])
 
     return f"""
@@ -188,39 +192,13 @@ def renderizar_laudo_html(id_laudo, dados_json):
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {{
-            --verde-escuro: #062b21;
-            --verde-medio: #0b3b2e;
-            --verde-claro: #1f6b4a;
-            --bege-fundo: #e3e8e1;
-            --bege-card: #f1f4ef;
-            --dourado: #c8a96a;
+            --verde-escuro: #062b21; --verde-medio: #0b3b2e; --verde-claro: #1f6b4a;
+            --bege-fundo: #e3e8e1; --bege-card: #f1f4ef; --dourado: #c8a96a;
         }}
         * {{ box-sizing: border-box; }}
-        body {{
-            background-color: #222;
-            font-family: 'Montserrat', sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }}
-        .laudo-folha {{
-            width: 1000px;
-            background-color: var(--bege-fundo);
-            padding: 30px;
-            border-radius: 5px;
-            position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-        }}
-        .header {{
-            background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro));
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            border-bottom: 4px solid var(--dourado);
-            margin-bottom: 20px;
-        }}
+        body {{ background-color: #222; font-family: 'Montserrat', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }}
+        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
+        .header {{ background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid var(--dourado); margin-bottom: 20px; }}
         .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 42px; letter-spacing: 2px; }}
         .header p {{ margin: 5px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: 300; }}
         .topo-container {{ display: grid; grid-template-columns: 400px 1fr; gap: 20px; margin-bottom: 20px; }}
@@ -235,15 +213,15 @@ def renderizar_laudo_html(id_laudo, dados_json):
         .conteudo-grid {{ display: grid; grid-template-columns: 1fr 350px; gap: 20px; }}
         .card-avaliacao {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }}
         .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 8px 15px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
-        .card-body {{ display: block; padding: 12px; gap: 15px; }}
+        .card-body {{ padding: 12px; }}
         .itens-lista {{ font-size: 11px; line-height: 1.5; color: #444; white-space: pre-wrap; margin-bottom: 10px; }}
         .subtotal-box {{ background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; font-size: 18px; border-radius: 5px; }}
         .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; padding: 15px; }}
-        .sidebar-titulo {{ border-bottom: 2px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }}
+        .sidebar-titulo {{ border-bottom: 2px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 12px; margin-bottom: 10px; }}
         .score-grande {{ font-size: 48px; font-weight: 800; color: var(--verde-escuro); text-align: center; }}
         .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 8px; font-weight: 700; margin-top: 10px; text-align: center; }}
         .foto-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }}
-        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; border: 1px solid #bbb; overflow: hidden; }}
+        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; overflow: hidden; }}
         .footer {{ margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
         .assinatura-box {{ text-align: center; width: 300px; }}
         .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 5px; }}
@@ -259,37 +237,36 @@ def renderizar_laudo_html(id_laudo, dados_json):
 
     <div class="topo-container">
         <div class="dados-proprietario">
-            <div class="info-row"><div class="icon">👤</div><div class="info-text"><label>Proprietário:</label><span>{dados_json['nome']}</span></div></div>
-            <div class="info-row"><div class="icon">🚗</div><div class="info-text"><label>Veículo:</label><span>{dados_json['veiculo']['marca']} {dados_json['veiculo']['modelo']}</span></div></div>
-            <div class="info-row"><div class="icon">📅</div><div class="info-text"><label>Data:</label><span>{dados_json['data']}</span></div></div>
-            <div class="info-row"><div class="icon">🆔</div><div class="info-text"><label>Código:</label><span>{id_laudo}</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Proprietário:</label><span>{dados_json['nome']}</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Veículo:</label><span>{dados_json['veiculo']['marca']} {dados_json['veiculo']['modelo']} ({dados_json['veiculo']['ano']})</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Data:</label><span>{dados_json['data']}</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Código:</label><span>{id_laudo}</span></div></div>
         </div>
-        <div class="foto-principal"><img src="{foto_capa}" alt="Foto Principal"></div>
+        <div class="foto-principal"><img src="{foto_capa}" alt="Veículo"></div>
     </div>
 
     <div class="barra-titulo">
-        <span style="font-size: 24px;">📄</span>
-        <div><strong>RELATÓRIO DE VISTORIA</strong><br><span style="font-size: 10px; opacity: 0.8;">AVALIAÇÃO TÉCNICA DE ORIGINALIDADE</span></div>
+        <div style="font-size: 20px;">📄 <strong>RELATÓRIO DE VISTORIA</strong></div>
     </div>
 
     <div class="conteudo-grid">
         <div class="col-esquerda">
             <div class="card-avaliacao">
-                <div class="card-header"><span>I. EXTERIOR E CARROCERIA (0-30 pts)</span></div>
+                <div class="card-header">I. EXTERIOR E CARROCERIA</div>
                 <div class="card-body">
                     <div class="itens-lista">{corpo_ext}</div>
                     <div class="subtotal-box">Subtotal: {sub_ext}</div>
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header"><span>II. INTERIOR E TAPEÇARIA (0-30 pts)</span></div>
+                <div class="card-header">II. INTERIOR E TAPEÇARIA</div>
                 <div class="card-body">
                     <div class="itens-lista">{corpo_int}</div>
                     <div class="subtotal-box">Subtotal: {sub_int}</div>
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header"><span>III. MECÂNICA VISUAL (0-30 pts)</span></div>
+                <div class="card-header">III. MECÂNICA VISUAL</div>
                 <div class="card-body">
                     <div class="itens-lista">{corpo_mec}</div>
                     <div class="subtotal-box">Subtotal: {sub_mec}</div>
@@ -300,10 +277,8 @@ def renderizar_laudo_html(id_laudo, dados_json):
         <div class="col-direita">
             <div class="sidebar-card">
                 <div class="sidebar-titulo">📊 RESULTADO FINAL</div>
-                <div class="resultado-final-box">
-                    <div class="score-grande">{score} / 100</div>
-                    <div class="veredito-tag">{veredito}</div>
-                </div>
+                <div class="score-grande">{score} / 100</div>
+                <div class="veredito-tag">{veredito}</div>
             </div>
             <div class="sidebar-card">
                 <div class="sidebar-titulo">📸 FOTOS DO VEÍCULO</div>
@@ -315,13 +290,11 @@ def renderizar_laudo_html(id_laudo, dados_json):
     <div class="footer">
         <div class="assinatura-box">
             <div class="assinatura-linha"></div>
-            <strong style="font-size: 14px;">Perito Automotivo</strong><br>
-            <span style="font-size: 10px;">Sistema de Avaliação de Originalidade</span>
+            <strong>Perito Automotivo</strong>
         </div>
         <div class="veredito-final-stamp">
-            <div style="font-size: 10px; opacity: 0.8;">PONTUAÇÃO FINAL</div>
+            <div style="font-size: 10px;">PONTUAÇÃO</div>
             <div style="font-size: 24px; font-weight: 800;">{score}</div>
-            <div style="font-size: 9px;">DE 100 PONTOS</div>
         </div>
     </div>
 </div>
