@@ -77,21 +77,25 @@ CONFERÊNCIA: O Total Final deve ser a soma exata dos 4 subtotais.
 RESULTADO FINAL: Exibir Total XX/100 e Status (Aprovado se >= 80).
 FORMATO DE RESPOSTA OBRIGATÓRIO (MANTENHA OS NÚMEROS):
 
+I. 🚗 EXTERIOR E CARROCERIA (0-30 pts)
 EXTERIOR
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
+II. 💺 INTERIOR E TAPEÇARIA (0-30 pts)
 INTERIOR
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
+III. 🔧 MECÂNICA VISUAL / COFRE (0-30 pts)
 MECÂNICA
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
+IV. ✨ CONSERVAÇÃO GERAL (0-10 pts)
 CONSERVAÇÃO
 [Texto técnico aqui]
 Subtotal: XX/10
