@@ -226,169 +226,163 @@ Sistema de Avaliação de Originalidade
 """
 
 
-def gerar_relatorio(fotos):
-    imgs = []
-    for _, path in fotos.items():
-        if not path or not os.path.exists(path): continue
-        b64 = to_base64(path)
-        if b64: imgs.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
-    
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
-            temperature=0.1
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Erro na IA: {str(e)}"
-
-
-@app.post("/avaliacao")
-async def avaliacao(
-    nome: Optional[str] = Form(None), marca: Optional[str] = Form(None), 
-    modelo: Optional[str] = Form(None), ano: Optional[str] = Form(None),
-    foto_frente: Optional[UploadFile] = File(None), foto_traseira: Optional[UploadFile] = File(None),
-    foto_lateral_direita: Optional[UploadFile] = File(None), foto_lateral_esquerda: Optional[UploadFile] = File(None),
-    foto_interior: Optional[UploadFile] = File(None), foto_painel: Optional[UploadFile] = File(None),
-    foto_motor: Optional[UploadFile] = File(None), foto_chassi: Optional[UploadFile] = File(None),
-):
-    cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
-    pasta = os.path.join(UPLOAD_DIR, cliente_id)
-    os.makedirs(pasta, exist_ok=True)
-
-    fotos_map = {
-        "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
-        "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
-        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
-        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
-        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
-        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
-        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
-        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
-    }
-
-    relatorio = gerar_relatorio(fotos_map)
-    
-    dados = {
-        "nome": nome, "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
-        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
-        "relatorio_ai": relatorio
-    }
-
-    with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=4)
-
-    return {"ok": True, "id": cliente_id}
-
-
-@app.get("/avaliacoes", response_class=HTMLResponse)
-def avaliacoes():
-    clientes = []
-    if os.path.exists(UPLOAD_DIR):
-        for pasta in os.listdir(UPLOAD_DIR):
-            path = os.path.join(UPLOAD_DIR, pasta, "dados.json")
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    clientes.append((pasta, json.load(f)))
-    clientes.reverse()
-    html = """<html><head><meta charset="UTF-8"><style>
-        body { font-family: sans-serif; background: #f2f2f2; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #052e22; color: #fff; border-radius: 6px; text-decoration: none; }
-    </style></head><body><h1>Dashboard de Avaliações</h1><div class="grid">"""
-    for id_, d in clientes:
-        v = d.get("veiculo", {})
-        html += f"""<div class="card"><b>{d.get('nome')}</b><br>
-        🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
-        <a class="btn" href="/cliente/{id_}">Ver Laudo Técnico →</a></div>"""
-    html += "</div></body></html>"
-    return HTMLResponse(html)
-
-
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
-    if not os.path.exists(path): return HTMLResponse("Erro")
+    if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
 
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
 
     texto = d.get("relatorio_ai", "")
 
-    # Função para extrair a seção e formatar os itens e subtotais
-    def processar_secao(chave_inicio, chave_fim, texto_completo):
+    # Função ultra-flexível para capturar as seções pelos algarismos romanos
+    def capturar_secao(romano_atual, proximo_romano, texto_completo):
         try:
-            inicio = texto_completo.find(chave_inicio)
-            if inicio == -1: return "Dados não disponíveis.", "00"
+            # Busca o bloco entre um romano e outro (ex: I. até II.)
+            padrao = f"{romano_atual}\\..*?(?={proximo_romano}\\.|$)"
+            match = re.search(padrao, texto_completo, re.DOTALL | re.IGNORECASE)
+            if not match: return "Informação não detectada.", "00/00"
             
-            parte = texto_completo[inicio:]
-            fim = parte.find(chave_fim) if chave_fim in parte else len(parte)
-            conteudo = parte[:fim].strip()
-
-            # Extrai o subtotal (ex: 29 / 30) para colocar no distintivo do card
-            sub_match = re.search(r"Subtotal:\s*(\d+\s*/\s*\d+)", conteudo, re.IGNORECASE)
-            sub_valor = sub_match.group(1) if sub_match else "-- / --"
-
-            # Formatação visual: coloca negrito antes dos dois pontos (ex: Pintura:)
-            # E remove a linha do subtotal do corpo do texto para não repetir
-            linhas = conteudo.split('\n')
-            texto_limpo = []
-            for l in linhas:
-                if "Subtotal:" in l or chave_inicio in l: continue
-                # Transforma "- Item: desc" em "• **Item:** desc"
-                l = re.sub(r"^-?\s*([\w\s]+):", r"• **\1:**", l)
-                texto_limpo.append(l)
-
-            return "\n".join(texto_limpo).strip(), sub_valor
+            bloco = match.group(0)
+            
+            # 1. Extrai o Subtotal (procura algo como 29 / 30 ou 29/30)
+            sub_match = re.search(r"(\d+\s*/\s*\d+)", bloco)
+            sub_valor = sub_match.group(1) if sub_match else "--/--"
+            
+            # 2. Limpa o texto: Remove o título da seção e o subtotal do corpo
+            linhas = bloco.split('\n')
+            corpo_limpo = []
+            for linha in linhas:
+                # Pula a linha que contém o algarismo romano (título) ou a palavra Subtotal
+                if re.search(f"^{romano_atual}\\.", linha) or "Subtotal" in linha:
+                    continue
+                
+                # Formatação: Coloca negrito no que vem antes de ":"
+                if ":" in linha:
+                    linha = re.sub(r"([\w\sáéíóúâêîôûãõç]+):", r"**\1:**", linha)
+                
+                if linha.strip(): corpo_limpo.append(linha.strip())
+            
+            return "\n".join(corpo_limpo), sub_valor
         except:
-            return "Erro no processamento.", "00"
+            return "Erro ao processar seção.", "00"
 
-    # Extraindo conteúdo e subtotais de cada área
-    ext_txt, ext_sub = processar_secao("I. 🚗 EXTERIOR", "II. 🪑 INTERIOR", texto)
-    int_txt, int_sub = processar_secao("II. 🪑 INTERIOR", "III. 🧰 MECÂNICA", texto)
-    mec_txt, mec_sub = processar_secao("III. 🧰 MECÂNICA", "IV. 🧼 CONSERVAÇÃO", texto)
-    cons_txt, cons_sub = processar_secao("IV. 🧼 CONSERVAÇÃO", "📊 RESULTADO FINAL", texto)
+    # Fatiamento das seções
+    ext_txt, ext_pts = capturar_secao("I", "II", texto)
+    int_txt, int_pts = capturar_secao("II", "III", texto)
+    mec_txt, mec_pts = capturar_secao("III", "IV", texto)
+    cons_txt, cons_pts = capturar_secao("IV", "📊 RESULTADO", texto)
     
-    # Recomendações (sem subtotal)
-    rec_txt = processar_secao("🧠 RECOMENDAÇÕES", "✍️ ASSINATURA", texto)
+    # Recomendações (fica entre Recomendações e Assinatura)
+    rec_txt = ""
+    rec_match = re.search(r"RECOMENDAÇÕES(.*?)(?=✍️ ASSINATURA|$)", texto, re.DOTALL | re.IGNORECASE)
+    if rec_match:
+        rec_txt = rec_match.group(1).strip()
 
-    # ... (Resto da lógica de score, mercado e fotos permanece a mesma)
+    # Score e Mercado
+    score_search = re.search(r"TOTAL:\s*(\d+)", texto)
+    score = score_search.group(1) if score_search else "00"
+    
+    def buscar_valor_mercado(label):
+        m = re.search(f"{label}:?\\s*(.*)", texto, re.IGNORECASE)
+        return m.group(1).split('\n').strip() if m else "---"
+
+    v_rapida = buscar_valor_mercado("Venda rápida")
+    v_part = buscar_valor_mercado("Mercado particular")
+    v_pos = buscar_valor_mercado("Pós placa preta")
+
+    # Fotos
+    fotos_dir = os.path.join(UPLOAD_DIR, id)
+    arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
+    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else f"/uploads/{id}/{arquivos}" if arquivos else ""
+    fotos_html = "".join([f'<div class="img-mini" style="background-image:url(\'/uploads/{id}/{f}\')"></div>' for f in arquivos])
 
     return f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="pt-br">
     <head>
+        <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
         <style>
-            /* Adicione este estilo para o Subtotal dentro do Card */
-            .subtotal-badge {{
-                float: right;
-                background: var(--dark);
-                color: var(--gold);
-                padding: 5px 15px;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 16px;
-                margin-top: -5px;
-            }}
-            .card-body {{ padding: 20px; }}
-            .card-body b {{ color: var(--dark); }}
+            :root {{ --dark: #052e22; --gold: #b59a5d; --bg: #e6e2d8; --white: #ffffff; }}
+            body {{ font-family: 'Montserrat', sans-serif; background: var(--bg); margin: 0; padding: 20px; }}
+            .container {{ width: 1000px; margin: auto; display: grid; grid-template-columns: 1.8fr 1fr; gap: 20px; }}
+            
+            .header {{ grid-column: 1/-1; background: var(--dark); color: white; padding: 25px; border-radius: 8px; border-bottom: 5px solid var(--gold); display: flex; justify-content: space-between; align-items: center; }}
+            .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 28px; }}
+
+            .card {{ background: var(--white); border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; overflow: hidden; }}
+            .card-header {{ background: var(--dark); color: white; padding: 12px 15px; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }}
+            .pts-badge {{ background: var(--gold); color: var(--dark); padding: 2px 10px; border-radius: 4px; font-size: 14px; font-weight: 800; }}
+            .card-body {{ padding: 15px; font-size: 13px; line-height: 1.6; }}
+            
+            .score-box {{ background: var(--white); border: 3px solid var(--gold); border-radius: 8px; padding: 20px; text-align: center; }}
+            .score-num {{ font-size: 55px; font-weight: 800; color: var(--dark); }}
+            
+            .mercado-item {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ccc; font-size: 12px; }}
+            .photo-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }}
+            .img-mini {{ height: 85px; background-size: cover; background-position: center; border-radius: 4px; }}
+            
+            .main-img {{ height: 250px; background: url('{foto_capa}') center/cover; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ccc; }}
+            pre {{ white-space: pre-wrap; font-family: inherit; margin: 0; }}
+            strong {{ color: var(--dark); }}
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="card">
-                <div class="card-header">
-                    I. EXTERIOR E CARROCERIA
-                    <span class="subtotal-badge">{ext_sub}</span>
+            <header class="header">
+                <div><h1>LAUDO TÉCNICO PERICIAL</h1><span>ORIGINALIDADE E ANTIGOMOBILISMO</span></div>
+                <div style="text-align:right">ID: {id}<br>{d['data']}</div>
+            </header>
+
+            <div class="left">
+                <div class="card">
+                    <div class="card-header">I. EXTERIOR E CARROCERIA <span class="pts-badge">{ext_pts}</span></div>
+                    <div class="card-body"><pre>{ext_txt}</pre></div>
                 </div>
-                <div class="card-body">
-                    <pre style="white-space: pre-wrap;">{ext_txt}</pre>
+                <div class="card">
+                    <div class="card-header">II. INTERIOR E TAPEÇARIA <span class="pts-badge">{int_pts}</span></div>
+                    <div class="card-body"><pre>{int_txt}</pre></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">III. MECÂNICA VISUAL <span class="pts-badge">{mec_pts}</span></div>
+                    <div class="card-body"><pre>{mec_txt}</pre></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">IV. CONSERVAÇÃO GERAL <span class="pts-badge">{cons_pts}</span></div>
+                    <div class="card-body"><pre>{cons_txt}</pre></div>
+                </div>
+                <div class="card" style="border-left: 5px solid var(--dark);">
+                    <div class="card-header">🧠 RECOMENDAÇÕES TÉCNICAS</div>
+                    <div class="card-body"><pre>{rec_txt}</pre></div>
                 </div>
             </div>
-            
+
+            <div class="right">
+                <div class="main-img"></div>
+                <div class="score-box">
+                    <div style="font-weight:bold; color:var(--gold)">PONTUAÇÃO FINAL</div>
+                    <div class="score-num">{score}</div>
+                    <div style="background:var(--dark); color:white; padding:10px; border-radius:4px; font-weight:bold;">
+                        {"APROVADO" if int(score) >= 80 else "EM ANÁLISE"}
+                    </div>
+                </div>
+                <br>
+                <div class="card">
+                    <div class="card-header">💰 ANÁLISE DE MERCADO</div>
+                    <div class="card-body">
+                        <div class="mercado-item"><span>Venda Rápida:</span> <b>{v_rapida}</b></div>
+                        <div class="mercado-item"><span>Particular:</span> <b>{v_part}</b></div>
+                        <div class="mercado-item"><span>Pós Placa:</span> <b>{v_pos}</b></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">📷 REGISTRO FOTOGRÁFICO</div>
+                    <div class="card-body"><div class="photo-grid">{fotos_html}</div></div>
+                </div>
             </div>
+        </div>
     </body>
     </html>
     """
