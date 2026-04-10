@@ -135,7 +135,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -242,7 +242,6 @@ def cliente(id: str):
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     
-    # Busca especificamente pela frente.jpg ou a primeira da lista
     if "frente.jpg" in arquivos:
         foto_capa = f"/uploads/{id}/frente.jpg"
     elif arquivos:
@@ -251,7 +250,6 @@ def cliente(id: str):
         foto_capa = "https://via.placeholder.com/800x400?text=Sem+Foto"
 
     fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;"></div>' for f in arquivos])
-    # ---------------------------------
 
     return f"""
 <!DOCTYPE html>
@@ -305,7 +303,6 @@ def cliente(id: str):
         <h1>LAUDO TÉCNICO PERICIAL</h1>
         <p>ORIGINALIDADE E ANTIGOMOBILISMO</p>
     </div>
-
     <div class="topo-container">
         <div class="dados-proprietario">
             <div class="info-row"><div class="icon">👤</div><div class="info-text"><label>Proprietário:</label><span>{d['nome']}</span></div></div>
@@ -315,12 +312,10 @@ def cliente(id: str):
         </div>
         <div class="foto-principal"><img src="{foto_capa}" alt="Veículo"></div>
     </div>
-
     <div class="barra-titulo">
         <span style="font-size: 24px;">📄</span>
         <div><strong>RELATÓRIO DE VISTORIA</strong><br><span style="font-size: 10px; opacity: 0.8;">TÉCNICA DE ORIGINALIDADE AUTOMOTIVA</span></div>
     </div>
-
     <div class="conteudo-grid">
         <div class="col-esquerda">
             <div class="card-avaliacao">
@@ -356,7 +351,6 @@ def cliente(id: str):
                 </div>
             </div>
         </div>
-
         <div class="col-direita">
             <div class="sidebar-card">
                 <div class="sidebar-titulo">📊 RESULTADO FINAL</div>
@@ -366,7 +360,6 @@ def cliente(id: str):
                     <div class="veredito-tag">{veredito}<br><span style="font-size: 11px; font-weight: 300;">para placa preta</span></div>
                 </div>
             </div>
-
             <div class="sidebar-card">
                 <div class="sidebar-titulo">💰 ANÁLISE DE MERCADO (R$)</div>
                 <div class="analise-mercado">
@@ -375,14 +368,12 @@ def cliente(id: str):
                     <p>Pós placa preta: <span>{v_pos}</span></p>
                 </div>
             </div>
-
             <div class="sidebar-card">
                 <div class="sidebar-titulo">📸 FOTOS DO VEÍCULO ({len(arquivos)})</div>
                 <div class="foto-grid">{fotos_grid_html}</div>
             </div>
         </div>
     </div>
-
     <div class="footer">
         <div class="assinatura-box">
             <div class="assinatura-linha"></div>
@@ -398,4 +389,4 @@ def cliente(id: str):
 </div>
 </body>
 </html>
-    """
+"""

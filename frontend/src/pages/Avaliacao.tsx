@@ -15,6 +15,7 @@ const Avaliacao = () => {
   const [formData, setFormData] = useState<AvaliacaoFormData | null>(null);
   const [photos, setPhotos] = useState<PhotoData>({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [laudoId, setLaudoId] = useState<string | null>(null); // Armazena o ID do laudo
 
   const stepIndex = { form: 0, photos: 1, payment: 2, success: 3 };
   const steps = ["Dados", "Fotos", "Pagamento", "Concluído"];
@@ -51,11 +52,8 @@ const Avaliacao = () => {
     form.append("motorizacao", formData.motorizacao);
     form.append("observacao", formData.observacao || "");
 
-    // 📸 DEBUG + ENVIO DAS FOTOS
-    console.log("🔥 FOTOS QUE ESTÃO SENDO ENVIADAS:");
+    // 📸 ENVIO DAS FOTOS
     Object.entries(photos).forEach(([key, file]) => {
-      console.log(key, file);
-
       if (file instanceof File) {
         form.append(`foto_${key}`, file);
       }
@@ -79,6 +77,10 @@ const Avaliacao = () => {
     try {
       const resposta = await enviarParaBackend();
       console.log("🔥 RESPOSTA BACKEND:", resposta);
+
+      if (resposta && resposta.id) {
+        setLaudoId(resposta.id); // Salva o ID para usar no botão final
+      }
 
       setTimeout(() => {
         setIsProcessing(false);
@@ -142,12 +144,21 @@ const Avaliacao = () => {
                 Avaliação enviada com sucesso!
               </h2>
               <p className="text-gray-500 mt-2">
-                Você receberá o resultado no seu email.
+                Seu laudo técnico de originalidade já foi gerado e está pronto para visualização.
               </p>
 
-              <Link to="/">
-                <Button className="mt-6">Voltar ao início</Button>
-              </Link>
+              <div className="flex flex-col gap-3 items-center mt-6">
+                <Button 
+                  className="bg-green-700 hover:bg-green-800 text-white px-8 h-12 text-lg"
+                  onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
+                >
+                  Visualizar Laudo Técnico
+                </Button>
+
+                <Link to="/">
+                  <Button variant="ghost" className="mt-2">Voltar ao início</Button>
+                </Link>
+              </div>
             </div>
           )}
 
