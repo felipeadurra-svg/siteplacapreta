@@ -212,13 +212,10 @@ def cliente(id: str):
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             if match:
                 res = match.group(1).strip()
-                # Extrai o subtotal
                 sub = re.search(r"Subtotal:\s*(\d+/\d+)", res, re.IGNORECASE)
                 sub_val = sub.group(1) if sub else "-- / --"
-                # Extrai a OBS técnica
                 obs = re.search(r"OBS:\s*(.*)", res, re.IGNORECASE)
                 obs_val = obs.group(1).strip() if obs else "Sem descontos visíveis."
-                # Limpa o texto principal das tags de sistema
                 res_limpo = re.sub(r"Subtotal:.*", "", res, flags=re.IGNORECASE)
                 res_limpo = re.sub(r"OBS:.*", "", res_limpo, flags=re.IGNORECASE).strip()
                 return res_limpo, sub_val, obs_val
@@ -241,12 +238,20 @@ def cliente(id: str):
     v_part = get_val(r"Mercado particular:?\s*(.*)", texto)
     v_pos = get_val(r"Pós placa preta:?\s*(.*)", texto)
 
+    # --- LÓGICA DE FOTOS CORRIGIDA ---
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
-    # Foto principal (primeira da lista)
-    foto_capa = f"/uploads/{id}/{arquivos}" if arquivos else "https://via.placeholder.com/800x400?text=Sem+Foto"
-    # Grid de fotos
-    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover;"></div>' for f in arquivos])
+    
+    # Busca especificamente pela frente.jpg ou a primeira da lista
+    if "frente.jpg" in arquivos:
+        foto_capa = f"/uploads/{id}/frente.jpg"
+    elif arquivos:
+        foto_capa = f"/uploads/{id}/{arquivos}"
+    else:
+        foto_capa = "https://via.placeholder.com/800x400?text=Sem+Foto"
+
+    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;"></div>' for f in arquivos])
+    # ---------------------------------
 
     return f"""
 <!DOCTYPE html>
@@ -287,7 +292,7 @@ def cliente(id: str):
         .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 8px; font-weight: 700; margin-top: 10px; }}
         .analise-mercado p {{ font-size: 12px; margin: 8px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; }}
         .foto-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }}
-        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; border: 1px solid #bbb; }}
+        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; border: 1px solid #bbb; background-position: center; background-size: cover; }}
         .footer {{ margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
         .assinatura-box {{ text-align: center; width: 300px; }}
         .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 5px; }}
