@@ -29,20 +29,21 @@ const Avaliacao = () => {
     setCurrentStep("payment");
   };
 
-  // 🚀 ENVIO PARA BACKEND
-  const enviarParaBackend = async () => {
+  // 🚀 LÓGICA DE ENVIO E REDIRECIONAMENTO
+  const handlePayment = async () => {
     if (!formData) return;
+    setIsProcessing(true);
 
     const form = new FormData();
 
-    // 👤 cliente
+    // 👤 Dados do Cliente
     form.append("nome", formData.nome);
     form.append("email", formData.email);
     form.append("telefone", formData.telefone);
     form.append("cidade", formData.cidade);
     form.append("estado", formData.estado);
 
-    // 🚗 veículo
+    // 🚗 Dados do Veículo
     form.append("marca", formData.marca);
     form.append("modelo", formData.modelo);
     form.append("ano", formData.ano);
@@ -51,44 +52,41 @@ const Avaliacao = () => {
     form.append("motorizacao", formData.motorizacao);
     form.append("observacao", formData.observacao || "");
 
-    // 📸 DEBUG + ENVIO DAS FOTOS
-    console.log("🔥 FOTOS QUE ESTÃO SENDO ENVIADAS:");
+    // 📸 Anexando Fotos
+    console.log("🔥 Iniciando envio das fotos para o backend...");
     Object.entries(photos).forEach(([key, file]) => {
-      console.log(key, file);
-
       if (file instanceof File) {
+        // O backend espera foto_frente, foto_traseira, etc.
         form.append(`foto_${key}`, file);
       }
     });
 
-    const res = await fetch("//siteplacapreta.onrender.com/avaliacao", {
-      method: "POST",
-      body: form,
-    });
-
-    if (!res.ok) {
-      throw new Error("Erro ao enviar avaliação");
-    }
-
-    return await res.json();
-  };
-
-  const handlePayment = async () => {
-    setIsProcessing(true);
-
     try {
-      const resposta = await enviarParaBackend();
-      console.log("🔥 RESPOSTA BACKEND:", resposta);
+      const res = await fetch("//siteplacapreta.onrender.com/avaliacao", {
+        method: "POST",
+        body: form,
+        redirect: "follow", // IMPORTANTE: Segue o RedirectResponse do FastAPI
+      });
+
+      if (!res.ok) {
+        throw new Error("Erro na resposta do servidor");
+      }
+
+      // 🏁 O Backend redireciona para /cliente/{id}
+      // O res.url conterá o endereço final do laudo gerado
+      const urlFinalDoLaudo = res.url;
+      console.log("✅ Laudo gerado com sucesso em:", urlFinalDoLaudo);
 
       setTimeout(() => {
         setIsProcessing(false);
-        setCurrentStep("success");
-      }, 1200);
+        // Em vez de mudar para a etapa "success", enviamos direto para o laudo
+        window.location.href = urlFinalDoLaudo;
+      }, 500);
 
     } catch (err) {
-      console.error(err);
+      console.error("❌ Erro no envio:", err);
       setIsProcessing(false);
-      alert("Erro ao enviar avaliação");
+      alert("Houve um erro ao processar sua avaliação. Por favor, tente novamente.");
     }
   };
 
@@ -115,7 +113,7 @@ const Avaliacao = () => {
             ))}
           </div>
 
-          {/* ETAPAS */}
+          {/* CONTEÚDO DAS ETAPAS */}
           {currentStep === "form" && (
             <VehicleForm onSubmit={handleFormSubmit} />
           )}
@@ -139,10 +137,10 @@ const Avaliacao = () => {
             <div className="text-center">
               <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
               <h2 className="text-2xl font-bold mt-4">
-                Avaliação enviada com sucesso!
+                Avaliação processada!
               </h2>
               <p className="text-gray-500 mt-2">
-                Você receberá o resultado no seu email.
+                Seu laudo técnico foi gerado e está pronto para visualização.
               </p>
 
               <Link to="/">
