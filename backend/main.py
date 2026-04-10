@@ -55,57 +55,68 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 ⚠️ REGRAS CRÍTICAS:
 - Use exatamente os tópicos solicitados abaixo.
 - Em cada tópico, descreva o que vê tecnicamente.
+- Linguagem técnica estilo clube de antigomobilismo
+⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MODERADO):
+- Redução de 1 ponto: Para itens desgastados, substituições por peças de época não originais ou detalhes estéticos menores. (Padrão para a maioria dos desvios).
+- Redução de 2 ou mais pontos: APENAS para faltas graves de originalidade, modificações irreversíveis ou itens que descaracterizam o modelo (ex: motor de outra marca, teto solar adaptado, cor não existente no catálogo do ano).
+Formato obrigatório para descontos (NÃO USE EMOJIS OU SÍMBOLOS ESPECIAIS):
+“Redução de X ponto(s) devido a [descrição objetiva]”
+- Base exclusivamente em evidência visual
+- Todo desconto deve vir acompanhado de justificativa técnica objetiva
 - Se houver desconto de pontos, adicione uma linha "OBS: [justificativa]".
 - Mantenha o Subtotal no formato "Subtotal: XX/XX".
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 
 📌 IDENTIFICAÇÃO DO VEÍCULO
-Marca: [Texto]
-Modelo: [Texto]
-Ano: [Texto]
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise (baixa / média / alta)
 
-1- EXTERIOR E CARROCERIA (0-30pts)
--alinhamento de porta: [comentário]
--pintura: [comentário]
--cromados e lanternas: [comentário]
--rodas e pneus: [comentário]
--sinais de restauração: [comentário]
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+
+1- EXTERIOR  (0-30pts)
+-Alinhamento de porta: [comentário]
+-Pintura: [comentário]
+-Cromados e lanternas: [comentário]
+-Rodas e pneus: [comentário]
+-Sinais de restauração: [comentário]
 Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 
-2- INTERIOR E TAPEÇARIA (0-30pts)
+2- INTERIOR  
 -painel: [comentário]
 -volante: [comentário]
 -bancos e tecidos: [comentário]
 -forração: [comentário]
 -conservação geral: [comentário]
-OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 
-3- MECÂNICA / VISUAL (0-30pts)
+3- MECÂNICA 
 -organização do cofre: [comentário]
 -fiação aparente: [comentário]
 -componentes originais visíveis: [comentário]
 -suspensão e rodas: [comentário]
-OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 
-4- CONSERVAÇÃO (0-10pts)
+4- CONSERVAÇÃO 
 -estrutura aparente: [comentário]
 -borrachas: [comentário]
 -desgaste natural: [comentário]
-OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/10
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 
 📊 RESULTADO FINAL
 TOTAL: XX / 100
 🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
 
-💰 ANÁLISE DE MERCADO
-- Venda rápida: R$ [Valor]
-- Mercado particular: R$ [Valor]
-- Pós placa preta: R$ [Valor]
+💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
+💸 Venda rápida: R$ XXXXX a R$ XXXXX
+💰 Mercado particular: R$ XXXXX a R$ XXXXX
+🏆 Pós placa preta: R$ XXXXX a R$ XXXXX
 """
 
 def gerar_relatorio(fotos):
