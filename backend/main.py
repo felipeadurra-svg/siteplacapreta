@@ -32,7 +32,6 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-
 def salvar_imagem(file: UploadFile, path: str):
     if not file: return None
     try:
@@ -43,82 +42,70 @@ def salvar_imagem(file: UploadFile, path: str):
         return path
     except: return None
 
-
 def to_base64(path):
     if not path or not os.path.exists(path): return None
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-
 def gerar_prompt():
     return """
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO.
-Produza um LAUDO TÉCNICO seguindo rigorosamente os itens abaixo.
-
-⚠️ REGRAS DE FORMATAÇÃO (ESTRITA):
-- NÃO USE EMOJIS (nada de 📌, 🚗, ✅, ❌).
-- Use exatamente os tópicos listados abaixo.
-- Formato: "- **Item** : Comentário técnico" (Negrito, espaço, dois pontos).
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 
 ⚠️ REGRAS CRÍTICAS:
-- NÃO inventar peças não visíveis
-- NÃO usar fórmulas ou cálculos no texto
-- Linguagem técnica estilo clube de antigomobilismo
-- Base exclusivamente em evidência visual
-- Todo desconto deve vir acompanhado de justificativa técnica objetiva
+- Use exatamente os tópicos solicitados abaixo.
+- Em cada tópico, descreva o que vê tecnicamente.
+- Se houver desconto de pontos, adicione uma linha "OBS: [justificativa]".
+- Mantenha o Subtotal no formato "Subtotal: XX/XX".
 
+FORMATO DE RESPOSTA OBRIGATÓRIO:
 
-
-⚖️ CRITÉRIOS DE PONTUAÇÃO:
-- Redução de 1 ponto: Padrão para desvios comuns (pneus modernos, filtros, pequenos desgastes).
-- Redução de 2 ou mais pontos: Apenas para modificações graves ou falta de originalidade crítica.
-
-ESTRUTURA OBRIGATÓRIA:
+📌 IDENTIFICAÇÃO DO VEÍCULO
+Marca: [Texto]
+Modelo: [Texto]
+Ano: [Texto]
 
 1- EXTERIOR E CARROCERIA (0-30pts)
-- **Alinhamento de porta** : 
-- **Pintura** : 
-- **Cromados e lanternas** : 
-- **Rodas e pneus** : 
-- **Sinais de restauração** : 
-DESCONTO: (Se houver, descreva aqui. Se não, escreva "Sem descontos")
+-alinhamento de porta: [comentário]
+-pintura: [comentário]
+-cromados e lanternas: [comentário]
+-rodas e pneus: [comentário]
+-sinais de restauração: [comentário]
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/30
 
 2- INTERIOR E TAPEÇARIA (0-30pts)
-- **Painel** : 
-- **Volante** : 
-- **Bancos e tecidos** : 
-- **Forração** : 
-- **Conservação geral** : 
-DESCONTO: (Se houver, descreva aqui. Se não, escreva "Sem descontos")
+-painel: [comentário]
+-volante: [comentário]
+-bancos e tecidos: [comentário]
+-forração: [comentário]
+-conservação geral: [comentário]
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/30
 
 3- MECÂNICA / VISUAL (0-30pts)
-- **Organização do cofre** : 
-- **Fiação aparente** : 
-- **Componentes originais visíveis** : 
-- **Suspensão e rodas** : 
-DESCONTO: (Se houver, descreva aqui. Se não, escreva "Sem descontos")
+-organização do cofre: [comentário]
+-fiação aparente: [comentário]
+-componentes originais visíveis: [comentário]
+-suspensão e rodas: [comentário]
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/30
 
 4- CONSERVAÇÃO (0-10pts)
-- **Estrutura aparente** : 
-- **Borrachas** : 
-- **Desgaste natural** : 
-DESCONTO: (Se houver, descreva aqui. Se não, escreva "Sem descontos")
+-estrutura aparente: [comentário]
+-borrachas: [comentário]
+-desgaste natural: [comentário]
+OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/10
 
 📊 RESULTADO FINAL
-TOTAL: XX/100
-🏁 VEREDITO: (APROVADO ou REPROVADO)
+TOTAL: XX / 100
+🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
 
 💰 ANÁLISE DE MERCADO
-Venda rápida: R$ XXX
-Mercado particular: R$ XXX
-Pós placa preta: R$ XXX
-
-🧠 RECOMENDAÇÕES
-(Liste as sugestões técnicas aqui no formato - **Item** : Sugestão)
+- Venda rápida: R$ [Valor]
+- Mercado particular: R$ [Valor]
+- Pós placa preta: R$ [Valor]
 """
 
 def gerar_relatorio(fotos):
@@ -134,7 +121,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -150,7 +137,6 @@ async def avaliacao(
     cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
-
     fotos_map = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
@@ -161,7 +147,6 @@ async def avaliacao(
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
     }
-
     relatorio = gerar_relatorio(fotos_map)
     
     dados = {
@@ -169,10 +154,8 @@ async def avaliacao(
         "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
         "relatorio_ai": relatorio
     }
-
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
-
     return {"ok": True, "id": cliente_id}
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
@@ -186,20 +169,17 @@ def avaliacoes():
                     clientes.append((pasta, json.load(f)))
     
     clientes.reverse()
-
     html = """<html><head><meta charset="UTF-8"><style>
         body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 4px solid #052e22; }
-        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #052e22; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; }
+        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 4px solid #0b3b2e; }
+        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #0b3b2e; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; }
     </style></head><body><h1>🚗 Dashboard de Avaliações</h1><div class="grid">"""
-
     for id_, d in clientes:
         v = d.get("veiculo", {})
         html += f"""<div class="card"><b>{d.get('nome')}</b><br>
         🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
         <a class="btn" href="/cliente/{id_}">Abrir Laudo Técnico</a></div>"""
-    
     html += "</div></body></html>"
     return HTMLResponse(html)
 
@@ -207,185 +187,176 @@ def avaliacoes():
 def cliente(id: str):
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
     if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
-
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
-
+    
     texto = d.get("relatorio_ai", "")
 
-    # Função para limpar e converter Markdown em HTML simples
-    def formatar(txt):
-        if not txt: return ""
-        # Converte **Texto** para <b>Texto</b>
-        txt = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", txt)
-        # Converte quebras de linha em <br>
-        return txt.replace("\n", "<br>")
-
-    def parse_section(num_id, texto_bruto):
+    def extrair_secao(prefixo, proximo, original):
         try:
-            # Regex para capturar da seção X- até a próxima seção ou marcador final
-            padrao = rf"{num_id}.*?\n(.*?)(?=\n\d-|\n📊|\n🏁|\n💰|\n🧠|$)"
-            match = re.search(padrao, texto_bruto, re.DOTALL | re.IGNORECASE)
-            if not match: return "Dados não localizados.", "Sem descontos.", "0"
-            
-            bloco = match.group(1).strip()
-            
-            # Extração da nota numérica do subtotal
-            score_match = re.search(r"Subtotal:\s*(\d+)", bloco, re.IGNORECASE)
-            score = score_match.group(1) if score_match else "0"
-            
-            # Divisão entre Observações e Descontos baseada na palavra DESCONTO:
-            partes = re.split(r"(?i)DESCONTO:", bloco)
-            obs = partes.strip()
-            
-            # Limpa o texto das observações removendo a linha final de subtotal que a IA possa ter repetido
-            obs = re.sub(r"(?i)Subtotal:.*", "", obs).strip()
-            
-            desc = partes.split("Subtotal").strip() if len(partes) > 1 else "Sem descontos técnicos visíveis."
-            
-            return formatar(obs), formatar(desc), score
-        except: return "Erro no processamento", "Erro", "0"
+            padrao = rf"{prefixo}(.*?)(?={proximo}|$)"
+            match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
+            if match:
+                res = match.group(1).strip()
+                # Extrair subtotal antes de limpar para o card
+                sub = re.search(r"Subtotal:\s*(\d+/\d+)", res, re.IGNORECASE)
+                sub_val = sub.group(1) if sub else "-- / --"
+                # Limpar o subtotal do texto principal para não repetir
+                res = re.sub(r"Subtotal:.*", "", res, flags=re.IGNORECASE).strip()
+                return res, sub_val
+            return "Dados não localizados.", "-- / --"
+        except: return "Erro", "-- / --"
 
-    # Extração das 4 seções baseadas nos números 1-, 2-, 3-, 4-
-    ext_obs, ext_desc, ext_pts = parse_section("1-", texto)
-    int_obs, int_desc, int_pts = parse_section("2-", texto)
-    mec_obs, mec_desc, mec_pts = parse_section("3-", texto)
-    cons_obs, cons_desc, cons_pts = parse_section("4-", texto)
+    sec_ext, sub_ext = extrair_secao("1- EXTERIOR", "2- INTERIOR", texto)
+    sec_int, sub_int = extrair_secao("2- INTERIOR", "3- MECÂNICA", texto)
+    sec_mec, sub_mec = extrair_secao("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
+    sec_cons, sub_cons = extrair_secao("4- CONSERVAÇÃO", "RESULTADO FINAL", texto)
     
-    # Captura de Valores de Mercado
+    score = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
+    veredito = "APROVADO" if "APROVADO" in texto.upper() else "REPROVADO"
+    
     def get_val(regex, txt):
         m = re.search(regex, txt, re.IGNORECASE)
-        return m.group(1).strip() if m else "Consulte"
+        return m.group(1).strip() if m else "R$ --"
 
     v_rapida = get_val(r"Venda rápida:?\s*(.*)", texto)
     v_part = get_val(r"Mercado particular:?\s*(.*)", texto)
     v_pos = get_val(r"Pós placa preta:?\s*(.*)", texto)
 
-    # Captura de Recomendações e Veredito
-    recom_match = re.search(r"RECOMENDAÇÕES(.*?)(?=$)", texto, re.DOTALL | re.IGNORECASE)
-    recom = formatar(recom_match.group(1).strip()) if recom_match else "Sem recomendações adicionais."
-    
-    score_final = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
-    veredito = "APROVADO" if "APROVADO" in texto.upper() else "REPROVADO"
-
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
-    fotos_html = "".join([f'<div class="img-mini" style="background-image:url(\'/uploads/{id}/{f}\')"></div>' for f in arquivos])
+    fotos_html = "".join([f'<div class="photo" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;" data="{i+1}"></div>' for i, f in enumerate(arquivos)])
 
     return f"""
-    <!DOCTYPE html>
-    <html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <title>Laudo Técnico - {id}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
-        <style>
-            :root {{ --dark: #052e22; --gold: #b59a5d; --bg: #d9d4c7; --white: #ffffff; }}
-            body {{ font-family: 'Montserrat', sans-serif; background: var(--bg); margin: 0; padding: 40px; color: #333; }}
-            .paper {{ width: 900px; margin: auto; background: var(--white); padding: 40px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }}
-            
-            .header-laudo {{ background: var(--dark); color: white; padding: 25px; border-radius: 4px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--gold); }}
-            .header-laudo h1 {{ margin: 0; font-size: 24px; letter-spacing: 1px; }}
-            
-            .card-secao {{ margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }}
-            .card-header {{ background: var(--dark); color: white; padding: 10px 15px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }}
-            .card-content {{ display: flex; min-height: 140px; }}
-            
-            .col-main {{ width: 68%; padding: 15px; border-right: 1px solid #eee; font-size: 13px; line-height: 1.6; }}
-            .col-side {{ width: 32%; padding: 15px; background: #fcfcfc; display: flex; flex-direction: column; justify-content: space-between; }}
-            
-            .label-tec {{ font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px; display: block; }}
-            .desc-txt {{ font-size: 11.5px; color: #444; line-height: 1.4; }}
-            
-            .subtotal-tag {{ background: var(--dark); color: white; text-align: center; padding: 8px; border-radius: 4px; margin-top: 10px; }}
-            .subtotal-tag small {{ font-size: 9px; display: block; opacity: 0.7; text-transform: uppercase; }}
-            .subtotal-tag b {{ font-size: 20px; }}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Laudo Técnico Pericial - {id}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {{ --verde1:#0b3b2e; --verde2:#1f6b4a; --dourado:#c8a96a; --fundo:#e8e4db; }}
+body {{ margin:0; background:var(--fundo); font-family:'Montserrat',sans-serif; }}
+.container {{ width:1180px; margin:20px auto; position:relative; }}
+.header {{ background:linear-gradient(135deg,var(--verde1),var(--verde2)); color:white; border-radius:12px; padding:25px; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:inset 0 0 30px rgba(0,0,0,.4); }}
+.header h1 {{ font-family:'Cinzel',serif; letter-spacing:3px; margin:0; }}
+.header span {{ font-size:13px; opacity:.9; }}
+.main {{ display:grid; grid-template-columns: 2fr 1fr; gap:15px; margin-top:15px; }}
+.card {{ background:#f6f2ea; border-radius:10px; border:1px solid #d6d1c7; box-shadow:0 3px 10px rgba(0,0,0,.15); margin-bottom:15px; }}
+.title {{ background:linear-gradient(90deg,var(--verde1),var(--verde2)); color:#fff; padding:8px 12px; border-radius:10px 10px 0 0; font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px; }}
+.content {{ padding:12px; font-size:13px; line-height:1.5; white-space: pre-wrap; }}
+.info-box {{ display:grid; grid-template-columns:1fr; gap:4px; }}
+.field {{ border-bottom:1px solid #bbb; padding:4px 0; }}
+.subtotal {{ margin-top:8px; background:var(--verde1); color:#fff; text-align:center; padding:6px; border-radius:6px; font-weight:bold; }}
+.result-box {{ text-align:center; padding:15px; }}
+.score {{ font-size:35px; font-weight:bold; color: var(--verde1); }}
+.veredito {{ margin-top:10px; background:linear-gradient(135deg,var(--verde1),var(--verde2)); color:white; padding:12px; border-radius:8px; font-weight:bold; }}
+.market p {{ margin:6px 0; font-size:13px; border-bottom: 1px dashed #ccc; padding-bottom:4px; }}
+.photos {{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }}
+.photo {{ height:70px; background:#cfcfcf; border-radius:6px; position:relative; border: 1px solid #ccc; }}
+.photo::before {{ content:attr(data); position:absolute; top:2px; left:4px; font-size:9px; background:rgba(255,255,255,0.7); padding:1px 4px; border-radius:3px; }}
+.footer {{ display:flex; justify-content:space-between; margin-top:30px; align-items: flex-end; }}
+.assinatura {{ width:60%; }}
+.linha {{ border-top:2px solid #333; width:280px; margin-bottom:10px; }}
+.assinatura-nome {{ font-family:'Cinzel',serif; font-size:20px; color:var(--verde1); }}
+.final {{ width:30%; background:linear-gradient(135deg,var(--verde1),var(--verde2)); color:white; border-radius:10px; padding:20px; text-align:center; font-weight:bold; font-size:18px; }}
+.watermark {{ position:fixed; bottom:20px; right:20px; opacity:0.05; font-size:150px; z-index:-1; }}
+.icon {{ font-size: 16px; }}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>LAUDO TÉCNICO PERICIAL</h1>
+        <span>SISTEMA PREMIUM DE AVALIAÇÃO - ORIGINALIDADE E ANTIGOMOBILISMO</span>
+    </div>
 
-            .recom-box {{ background: #fffde7; border: 1px solid #e6d8ad; padding: 20px; border-radius: 8px; margin-top: 20px; font-size: 13px; }}
-            
-            .mercado-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }}
-            .mercado-item {{ background: #f4f4f4; padding: 15px; border-radius: 6px; text-align: center; border-bottom: 3px solid var(--gold); }}
-            .mercado-item span {{ font-size: 10px; color: #777; font-weight: bold; text-transform: uppercase; }}
-            .mercado-item div {{ font-size: 14px; font-weight: bold; color: var(--dark); margin-top: 5px; }}
-
-            .score-final-box {{ text-align: center; padding: 30px; border: 5px solid var(--dark); margin-top: 30px; border-radius: 10px; }}
-            .veredito-label {{ background: var(--dark); color: white; padding: 12px; font-weight: bold; margin-top: 15px; display: inline-block; width: 80%; border-radius: 4px; }}
-            
-            .grid-fotos {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }}
-            .img-mini {{ height: 85px; background-size: cover; background-position: center; border: 1px solid #ddd; border-radius: 4px; }}
-        </style>
-    </head>
-    <body>
-        <div class="paper">
-            <header class="header-laudo">
-                <div><h1>RELATÓRIO DE VISTORIA</h1><small>AVALIAÇÃO TÉCNICA DE ORIGINALIDADE</small></div>
-                <div style="text-align:right; font-size: 12px;"><b>PROPRIETÁRIO:</b> {d['nome']}<br><b>EMISSÃO:</b> {d['data']}</div>
-            </header>
-
-            <div class="card-secao">
-                <div class="card-header">1- EXTERIOR E CARROCERIA (0-30pts)</div>
-                <div class="card-content">
-                    <div class="col-main">{ext_obs}</div>
-                    <div class="col-side">
-                        <div><span class="label-tec">Observações técnicas:</span><div class="desc-txt">{ext_desc}</div></div>
-                        <div class="subtotal-tag"><small>SUBTOTAL</small><b>{ext_pts} / 30</b></div>
-                    </div>
+    <div class="main">
+        <div>
+            <div class="card">
+                <div class="title">DADOS DO PROPRIETÁRIO E VEÍCULO</div>
+                <div class="content info-box">
+                    <div class="field"><b>Proprietário:</b> {d['nome']}</div>
+                    <div class="field"><b>Veículo:</b> {d['veiculo']['marca']} {d['veiculo']['modelo']} - {d['veiculo']['ano']}</div>
+                    <div class="field"><b>Data do Laudo:</b> {d['data']} | <b>ID:</b> {id}</div>
                 </div>
             </div>
 
-            <div class="card-secao">
-                <div class="card-header">2- INTERIOR E TAPEÇARIA (0-30pts)</div>
-                <div class="card-content">
-                    <div class="col-main">{int_obs}</div>
-                    <div class="col-side">
-                        <div><span class="label-tec">Observações técnicas:</span><div class="desc-txt">{int_desc}</div></div>
-                        <div class="subtotal-tag"><small>SUBTOTAL</small><b>{int_pts} / 30</b></div>
-                    </div>
+            <div class="card">
+                <div class="title">1. EXTERIOR E CARROCERIA (0-30 pts)</div>
+                <div class="content">
+                    {sec_ext}
+                    <div class="subtotal">Subtotal: {sub_ext}</div>
                 </div>
             </div>
 
-            <div class="card-secao">
-                <div class="card-header">3- MECÂNICA / VISUAL (0-30pts)</div>
-                <div class="card-content">
-                    <div class="col-main">{mec_obs}</div>
-                    <div class="col-side">
-                        <div><span class="label-tec">Observações técnicas:</span><div class="desc-txt">{mec_desc}</div></div>
-                        <div class="subtotal-tag"><small>SUBTOTAL</small><b>{mec_pts} / 30</b></div>
-                    </div>
+            <div class="card">
+                <div class="title">2. INTERIOR E TAPEÇARIA (0-30 pts)</div>
+                <div class="content">
+                    {sec_int}
+                    <div class="subtotal">Subtotal: {sub_int}</div>
                 </div>
             </div>
 
-            <div class="card-secao">
-                <div class="card-header">4- CONSERVAÇÃO (0-10pts)</div>
-                <div class="card-content">
-                    <div class="col-main">{cons_obs}</div>
-                    <div class="col-side">
-                        <div><span class="label-tec">Observações técnicas:</span><div class="desc-txt">{cons_desc}</div></div>
-                        <div class="subtotal-tag"><small>SUBTOTAL</small><b>{cons_pts} / 10</b></div>
-                    </div>
+            <div class="card">
+                <div class="title">3. MECÂNICA VISUAL (0-30 pts)</div>
+                <div class="content">
+                    {sec_mec}
+                    <div class="subtotal">Subtotal: {sub_mec}</div>
                 </div>
             </div>
 
-            <div class="recom-box"><b>RECOMENDAÇÕES TÉCNICAS:</b><br>{recom}</div>
-
-            <div class="mercado-grid">
-                <div class="mercado-item"><span>Venda Rápida</span><div>{v_rapida}</div></div>
-                <div class="mercado-item"><span>Particular</span><div>{v_part}</div></div>
-                <div class="mercado-item"><span>Pós Placa Preta</span><div>{v_pos}</div></div>
+            <div class="card">
+                <div class="title">4. CONSERVAÇÃO (0-10 pts)</div>
+                <div class="content">
+                    {sec_cons}
+                    <div class="subtotal">Subtotal: {sub_cons}</div>
+                </div>
             </div>
-
-            <div class="score-final-box">
-                <span style="font-size:13px; font-weight:bold; color:#777;">PONTUAÇÃO FINAL</span><br>
-                <span style="font-size:60px; font-weight:900; color:var(--dark)">{score_final} / 100</span><br>
-                <div class="veredito-label">{veredito} PARA PLACA PRETA</div>
-            </div>
-
-            <div class="grid-fotos">{fotos_html}</div>
-            
-            <p style="text-align:center; font-size:10px; color:#999; margin-top:30px;">
-                Este laudo é uma análise visual baseada nas imagens fornecidas. Para certificação oficial, é necessária vistoria presencial por clube credenciado ao Denatran.
-            </p>
         </div>
-    </body>
-    </html>
+
+        <div>
+            <div class="card">
+                <div class="title">🏆 RESULTADO FINAL</div>
+                <div class="result-box">
+                    <span>Pontuação Total</span>
+                    <div class="score">{score} / 100</div>
+                    <div class="veredito">{veredito}</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="title">💰 ANÁLISE DE MERCADO (ESTIMADA)</div>
+                <div class="content market">
+                    <p><b>Venda rápida:</b> {v_rapida}</p>
+                    <p><b>Particular:</b> {v_part}</p>
+                    <p><b>Pós placa preta:</b> {v_pos}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="title">📷 REGISTRO FOTOGRÁFICO</div>
+                <div class="content photos">
+                    {fotos_html}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="assinatura">
+            <div class="linha"></div>
+            <div class="assinatura-nome">Perito Automotivo Responsável</div>
+            <div style="font-size:10px; margin-top:5px;">Certificado de Originalidade e Antigomobilismo</div>
+        </div>
+        <div class="final">
+            STATUS FINAL:<br>
+            {veredito}
+        </div>
+    </div>
+
+    <div class="watermark">🚗</div>
+</div>
+</body>
+</html>
     """
