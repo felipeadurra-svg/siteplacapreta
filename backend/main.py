@@ -77,22 +77,22 @@ CONFERÊNCIA: O Total Final deve ser a soma exata dos 4 subtotais.
 RESULTADO FINAL: Exibir Total XX/100 e Status (Aprovado se >= 80).
 FORMATO DE RESPOSTA OBRIGATÓRIO (MANTENHA OS NÚMEROS):
 
-1- EXTERIOR
+EXTERIOR
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
-2- INTERIOR
+INTERIOR
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
-3- MECÂNICA
+MECÂNICA
 [Texto técnico aqui]
 Subtotal: XX/30
 OBS: [Justificativa]
 
-4- CONSERVAÇÃO
+CONSERVAÇÃO
 [Texto técnico aqui]
 Subtotal: XX/10
 OBS: [Justificativa]
