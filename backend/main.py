@@ -76,7 +76,7 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 - Confiança da análise (baixa / média / alta)
 
 
-1- EXTERIOR  (0-30pts)
+1- EXTERIOR  
 -Alinhamento de porta: [comentário]
 -Pintura: [comentário]
 -Cromados e lanternas: [comentário]
@@ -86,26 +86,26 @@ Subtotal: XX/30
 OBS: [Se houver desconto, descreva aqui, senão ignore]
 
 2- INTERIOR  
--painel: [comentário]
--volante: [comentário]
--bancos e tecidos: [comentário]
--forração: [comentário]
--conservação geral: [comentário]
+-Painel: [comentário]
+-Volante: [comentário]
+-Bancos e tecidos: [comentário]
+-Forração: [comentário]
+-Conservação geral: [comentário]
 Subtotal: XX/30
 OBS: [Se houver desconto, descreva aqui, senão ignore]
 
 3- MECÂNICA 
--organização do cofre: [comentário]
--fiação aparente: [comentário]
--componentes originais visíveis: [comentário]
--suspensão e rodas: [comentário]
+-Organização do cofre: [comentário]
+-Fiação aparente: [comentário]
+-Componentes originais visíveis: [comentário]
+-Suspensão e rodas: [comentário]
 Subtotal: XX/30
 OBS: [Se houver desconto, descreva aqui, senão ignore]
 
 4- CONSERVAÇÃO 
--estrutura aparente: [comentário]
--borrachas: [comentário]
--desgaste natural: [comentário]
+-Estrutura aparente: [comentário]
+-Borrachas: [comentário]
+-Desgaste natural: [comentário]
 Subtotal: XX/10
 OBS: [Se houver desconto, descreva aqui, senão ignore]
 
