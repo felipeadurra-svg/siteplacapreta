@@ -134,7 +134,7 @@ def gerar_relatorio_ai(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -167,21 +167,21 @@ def renderizar_laudo_html(id_laudo, dados_json):
     score = (re.findall(r"TOTAL:\s*(\d+)", analise_ia) or ["0"])[-1]
     veredito = "APROVADO" if "APROVADO" in analise_ia.upper() else "REPROVADO"
     
-    # Busca de fotos no diretório
+    # Busca de fotos no diretório - Lógica Reforçada
     fotos_dir = os.path.join(UPLOAD_DIR, id_laudo)
     fotos_urls = []
-    foto_capa = "https://via.placeholder.com/800x400"
+    foto_capa = "https://via.placeholder.com/1200x600?text=Foto+nao+encontrada"
     
     if os.path.exists(fotos_dir):
         arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
         fotos_urls = [f"/uploads/{id_laudo}/{f}" for f in arquivos]
-        # Garante que a foto de frente seja a principal se existir
+        # Prioridade para a foto frontal
         if "frente.jpg" in arquivos:
             foto_capa = f"/uploads/{id_laudo}/frente.jpg"
         elif fotos_urls:
             foto_capa = fotos_urls
 
-    fotos_html = "".join([f'<div class="mini-foto"><img src="{url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"></div>' for url in fotos_urls[:10]])
+    fotos_html = "".join([f'<div class="mini-foto"><img src="{url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"></div>' for url in fotos_urls[:15]])
 
     return f"""
 <!DOCTYPE html>
@@ -196,36 +196,77 @@ def renderizar_laudo_html(id_laudo, dados_json):
             --bege-fundo: #e3e8e1; --bege-card: #f1f4ef; --dourado: #c8a96a;
         }}
         * {{ box-sizing: border-box; }}
-        body {{ background-color: #222; font-family: 'Montserrat', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }}
-        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
-        .header {{ background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid var(--dourado); margin-bottom: 20px; }}
-        .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 42px; letter-spacing: 2px; }}
-        .header p {{ margin: 5px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: 300; }}
-        .topo-container {{ display: grid; grid-template-columns: 400px 1fr; gap: 20px; margin-bottom: 20px; }}
-        .dados-proprietario {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 12px; padding: 15px; }}
-        .info-row {{ display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #d0d5cd; }}
+        body {{ 
+            background-color: #1a1a1a; 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+        }}
+        /* LARGURA AMPLIADA E RESPONSIVA */
+        .laudo-folha {{ 
+            width: 95%; 
+            max-width: 1200px; 
+            background-color: var(--bege-fundo); 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 10px 50px rgba(0,0,0,0.6); 
+        }}
+        .header {{ 
+            background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro)); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            text-align: center; 
+            border-bottom: 5px solid var(--dourado); 
+            margin-bottom: 30px; 
+        }}
+        .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 48px; letter-spacing: 3px; }}
+        .header p {{ margin: 10px 0 0; font-size: 18px; letter-spacing: 5px; font-weight: 300; }}
+        
+        .topo-container {{ 
+            display: grid; 
+            grid-template-columns: 1fr 1.5fr; 
+            gap: 30px; 
+            margin-bottom: 30px; 
+        }}
+        .dados-proprietario {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 15px; padding: 25px; }}
+        .info-row {{ display: flex; align-items: center; gap: 15px; padding: 12px 0; border-bottom: 1px solid #d0d5cd; }}
         .info-row:last-child {{ border: none; }}
-        .info-text label {{ display: block; font-size: 11px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; }}
-        .info-text span {{ font-size: 15px; font-weight: 600; color: #333; }}
-        .foto-principal {{ border: 5px solid #fff; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; height: 250px; }}
+        .info-text label {{ display: block; font-size: 12px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; }}
+        .info-text span {{ font-size: 18px; font-weight: 600; color: #333; }}
+        
+        .foto-principal {{ 
+            border: 8px solid #fff; 
+            border-radius: 20px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
+            overflow: hidden; 
+            height: 400px; 
+        }}
         .foto-principal img {{ width: 100%; height: 100%; object-fit: cover; }}
-        .barra-titulo {{ background: var(--verde-escuro); color: white; padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }}
-        .conteudo-grid {{ display: grid; grid-template-columns: 1fr 350px; gap: 20px; }}
-        .card-avaliacao {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }}
-        .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 8px 15px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
-        .card-body {{ padding: 12px; }}
-        .itens-lista {{ font-size: 11px; line-height: 1.5; color: #444; white-space: pre-wrap; margin-bottom: 10px; }}
-        .subtotal-box {{ background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; font-size: 18px; border-radius: 5px; }}
-        .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; padding: 15px; }}
-        .sidebar-titulo {{ border-bottom: 2px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 12px; margin-bottom: 10px; }}
-        .score-grande {{ font-size: 48px; font-weight: 800; color: var(--verde-escuro); text-align: center; }}
-        .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 8px; font-weight: 700; margin-top: 10px; text-align: center; }}
-        .foto-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }}
-        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; overflow: hidden; }}
-        .footer {{ margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
-        .assinatura-box {{ text-align: center; width: 300px; }}
-        .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 5px; }}
-        .veredito-final-stamp {{ background: var(--verde-escuro); color: white; padding: 15px 30px; border-radius: 10px; text-align: center; }}
+        
+        .barra-titulo {{ background: var(--verde-escuro); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 25px; }}
+        
+        .conteudo-grid {{ display: grid; grid-template-columns: 1.6fr 1fr; gap: 30px; }}
+        
+        .card-avaliacao {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }}
+        .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 12px 20px; font-size: 16px; font-weight: 600; }}
+        .card-body {{ padding: 20px; }}
+        .itens-lista {{ font-size: 14px; line-height: 1.6; color: #444; white-space: pre-wrap; margin-bottom: 15px; }}
+        .subtotal-box {{ background: var(--verde-escuro); color: white; text-align: right; padding: 10px 20px; font-weight: bold; font-size: 20px; border-radius: 6px; }}
+        
+        .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 12px; margin-bottom: 20px; padding: 25px; }}
+        .sidebar-titulo {{ border-bottom: 3px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 14px; padding-bottom: 10px; margin-bottom: 15px; }}
+        .score-grande {{ font-size: 64px; font-weight: 800; color: var(--verde-escuro); text-align: center; margin: 10px 0; }}
+        .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 15px; border-radius: 10px; font-weight: 700; font-size: 20px; text-align: center; }}
+        
+        .foto-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }}
+        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 8px; overflow: hidden; border: 2px solid #fff; }}
+        
+        .footer {{ margin-top: 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ccc; padding-top: 30px; }}
+        .assinatura-box {{ text-align: center; width: 350px; }}
+        .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 8px; }}
     </style>
 </head>
 <body>
@@ -239,14 +280,14 @@ def renderizar_laudo_html(id_laudo, dados_json):
         <div class="dados-proprietario">
             <div class="info-row"><div class="info-text"><label>Proprietário:</label><span>{dados_json['nome']}</span></div></div>
             <div class="info-row"><div class="info-text"><label>Veículo:</label><span>{dados_json['veiculo']['marca']} {dados_json['veiculo']['modelo']} ({dados_json['veiculo']['ano']})</span></div></div>
-            <div class="info-row"><div class="info-text"><label>Data:</label><span>{dados_json['data']}</span></div></div>
-            <div class="info-row"><div class="info-text"><label>Código:</label><span>{id_laudo}</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Data da Vistoria:</label><span>{dados_json['data']}</span></div></div>
+            <div class="info-row"><div class="info-text"><label>Código de Autenticidade:</label><span>{id_laudo}</span></div></div>
         </div>
-        <div class="foto-principal"><img src="{foto_capa}" alt="Veículo"></div>
+        <div class="foto-principal"><img src="{foto_capa}" alt="Foto Principal do Veículo"></div>
     </div>
 
     <div class="barra-titulo">
-        <div style="font-size: 20px;">📄 <strong>RELATÓRIO DE VISTORIA</strong></div>
+        <div style="font-size: 22px;">📄 <strong>RELATÓRIO TÉCNICO DE ORIGINALIDADE</strong></div>
     </div>
 
     <div class="conteudo-grid">
@@ -266,7 +307,7 @@ def renderizar_laudo_html(id_laudo, dados_json):
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header">III. MECÂNICA VISUAL</div>
+                <div class="card-header">III. MECÂNICA E COFRE</div>
                 <div class="card-body">
                     <div class="itens-lista">{corpo_mec}</div>
                     <div class="subtotal-box">Subtotal: {sub_mec}</div>
@@ -276,12 +317,12 @@ def renderizar_laudo_html(id_laudo, dados_json):
 
         <div class="col-direita">
             <div class="sidebar-card">
-                <div class="sidebar-titulo">📊 RESULTADO FINAL</div>
+                <div class="sidebar-titulo">📊 PONTUAÇÃO FINAL</div>
                 <div class="score-grande">{score} / 100</div>
                 <div class="veredito-tag">{veredito}</div>
             </div>
             <div class="sidebar-card">
-                <div class="sidebar-titulo">📸 FOTOS DO VEÍCULO</div>
+                <div class="sidebar-titulo">📸 EVIDÊNCIAS FOTOGRÁFICAS</div>
                 <div class="foto-grid">{fotos_html}</div>
             </div>
         </div>
@@ -290,11 +331,11 @@ def renderizar_laudo_html(id_laudo, dados_json):
     <div class="footer">
         <div class="assinatura-box">
             <div class="assinatura-linha"></div>
-            <strong>Perito Automotivo</strong>
+            <strong style="font-size: 16px;">Perito Responsável</strong><br>
+            <span style="font-size: 12px; color: #666;">Sistema meucarroantigo.com</span>
         </div>
-        <div class="veredito-final-stamp">
-            <div style="font-size: 10px;">PONTUAÇÃO</div>
-            <div style="font-size: 24px; font-weight: 800;">{score}</div>
+        <div style="text-align: right; color: var(--verde-escuro); font-weight: bold;">
+            {datetime.now().year} © Laudo de Originalidade
         </div>
     </div>
 </div>
@@ -366,4 +407,4 @@ def cliente(id: str):
     if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
-    return HTMLResponse(f"<html><body style='background:#222; padding:20px;'>{renderizar_laudo_html(id, d)}</body></html>")
+    return HTMLResponse(f"<html><body style='background:#1a1a1a; padding:20px;'>{renderizar_laudo_html(id, d)}</body></html>")
