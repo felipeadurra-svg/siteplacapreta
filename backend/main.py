@@ -75,57 +75,36 @@ Realize o cálculo de subtração para cada subtotal (Máximo - Descontos).
 Formato do Subtotal: "Subtotal: XX/XX".
 CONFERÊNCIA: O Total Final deve ser a soma exata dos 4 subtotais.
 RESULTADO FINAL: Exibir Total XX/100 e Status (Aprovado se >= 80).
-FORMATO DE RESPOSTA OBRIGATÓRIO:
+FORMATO DE RESPOSTA OBRIGATÓRIO (MANTENHA OS NÚMEROS):
 
-📌 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano estimado
-- Geração
-- Confiança da análise (baixa / média / alta)
-
-
-1- EXTERIOR  
--Alinhamento de porta: [comentário]
--Pintura: [comentário]
--Cromados e lanternas: [comentário]
--Rodas e pneus: [comentário]
--Sinais de restauração: [comentário]
+1- EXTERIOR
+[Texto técnico aqui]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Justificativa]
 
-2- INTERIOR  
--Painel: [comentário]
--Volante: [comentário]
--Bancos e tecidos: [comentário]
--Forração: [comentário]
--Conservação geral: [comentário]
+2- INTERIOR
+[Texto técnico aqui]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Justificativa]
 
-3- MECÂNICA 
--Organização do cofre: [comentário]
--Fiação aparente: [comentário]
--Componentes originais visíveis: [comentário]
--Suspensão e rodas: [comentário]
+3- MECÂNICA
+[Texto técnico aqui]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Justificativa]
 
-4- CONSERVAÇÃO 
--Estrutura aparente: [comentário]
--Borrachas: [comentário]
--Desgaste natural: [comentário]
+4- CONSERVAÇÃO
+[Texto técnico aqui]
 Subtotal: XX/10
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Justificativa]
 
 📊 RESULTADO FINAL
 TOTAL: XX / 100
 🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
 
-💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
-💸 Venda rápida: R$ XXXXX a R$ XXXXX
-💰 Mercado particular: R$ XXXXX a R$ XXXXX
-🏆 Pós placa preta: R$ XXXXX a R$ XXXXX
+💰 ANÁLISE DE MERCADO
+💸 Venda rápida: R$ XXXXX
+💰 Mercado particular: R$ XXXXX
+🏆 Pós placa preta: R$ XXXXX
 """
 
 def gerar_relatorio(fotos):
@@ -141,7 +120,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -153,10 +132,12 @@ async def avaliacao(
     foto_lateral_direita: Optional[UploadFile] = File(None), foto_lateral_esquerda: Optional[UploadFile] = File(None),
     foto_interior: Optional[UploadFile] = File(None), foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None), foto_chassi: Optional[UploadFile] = File(None),
+    foto_adicional: Optional[UploadFile] = File(None),
 ):
     cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
+    
     fotos_map = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
@@ -166,7 +147,9 @@ async def avaliacao(
         "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
+        "adicional": salvar_imagem(foto_adicional, f"{pasta}/adicional.jpg"),
     }
+    
     relatorio = gerar_relatorio(fotos_map)
     
     dados = {
@@ -174,10 +157,10 @@ async def avaliacao(
         "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
         "relatorio_ai": relatorio
     }
+    
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
     
-    # Redireciona diretamente para o laudo após salvar
     return RedirectResponse(url=f"/cliente/{cliente_id}", status_code=303)
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
@@ -214,28 +197,41 @@ def cliente(id: str):
     
     texto = d.get("relatorio_ai", "")
 
-    def extrair_secao_v2(prefixo, proximo, original):
+    # --- NOVA FUNÇÃO DE EXTRAÇÃO ROBUSTA ---
+    def extrair_secao_v3(num, proximo, original):
         try:
-            padrao = rf"{prefixo}(.*?)(?={proximo}|$)"
+            # Captura tudo entre o número da seção e o próximo marco (número ou resultado final)
+            padrao = rf"{num}[-\s\*\:]+(.*?)(?={proximo}|📊 RESULTADO FINAL|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             if match:
-                res = match.group(1).strip()
-                sub = re.search(r"Subtotal:\s*(\d+/\d+)", res, re.IGNORECASE)
-                sub_val = sub.group(1) if sub else "-- / --"
-                obs = re.search(r"OBS:\s*(.*)", res, re.IGNORECASE)
-                obs_val = obs.group(1).strip() if obs else "Sem descontos visíveis."
-                res_limpo = re.sub(r"Subtotal:.*", "", res, flags=re.IGNORECASE)
-                res_limpo = re.sub(r"OBS:.*", "", res_limpo, flags=re.IGNORECASE).strip()
-                return res_limpo, sub_val, obs_val
-            return "Dados não localizados.", "-- / --", "N/A"
-        except: return "Erro", "-- / --", "Erro"
+                bloco = match.group(1).strip()
+                
+                # Extrai Subtotal
+                sub_match = re.search(r"Subtotal:\s*(\d+/\d+)", bloco, re.IGNORECASE)
+                sub_val = sub_match.group(1) if sub_match else "-- / --"
+                
+                # Extrai OBS
+                obs_match = re.search(r"OBS:\s*(.*)", bloco, re.IGNORECASE | re.DOTALL)
+                obs_val = obs_match.group(1).strip() if obs_match else "Nenhum desvio crítico observado."
+                
+                # Limpa o corpo (remove as linhas de subtotal e obs do texto principal)
+                corpo = re.sub(r"Subtotal:.*", "", bloco, flags=re.IGNORECASE | re.DOTALL)
+                corpo = re.sub(r"OBS:.*", "", corpo, flags=re.IGNORECASE | re.DOTALL).strip()
+                
+                return corpo, sub_val, obs_val
+            return "Análise técnica em processamento...", "-- / --", "N/A"
+        except:
+            return "Erro na formatação.", "-- / --", "Erro"
 
-    sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
-    sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
-    sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
-    sec_cons, sub_cons, obs_cons = extrair_secao_v2("4- CONSERVAÇÃO", "RESULTADO FINAL", texto)
+    # Extração das seções
+    sec_ext, sub_ext, obs_ext = extrair_secao_v3("1", "2", texto)
+    sec_int, sub_int, obs_int = extrair_secao_v3("2", "3", texto)
+    sec_mec, sub_mec, obs_mec = extrair_secao_v3("3", "4", texto)
+    sec_cons, sub_cons, obs_cons = extrair_secao_v3("4", "📊", texto)
     
-    score = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
+    # Score e Veredito
+    score_list = re.findall(r"TOTAL:\s*(\d+)", texto, re.IGNORECASE)
+    score = score_list[-1] if score_list else "00"
     veredito = "APROVADO" if "APROVADO" in texto.upper() else "REPROVADO"
     
     def get_val(regex, txt):
@@ -246,30 +242,25 @@ def cliente(id: str):
     v_part = get_val(r"Mercado particular:?\s*(.*)", texto)
     v_pos = get_val(r"Pós placa preta:?\s*(.*)", texto)
 
+    # Fotos
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     
-    if "frente.jpg" in arquivos:
-        foto_capa = f"/uploads/{id}/frente.jpg"
-    elif arquivos:
-        foto_capa = f"/uploads/{id}/{arquivos}"
-    else:
-        foto_capa = "https://via.placeholder.com/800x400?text=Sem+Foto"
-
-    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;"></div>' for f in arquivos])
+    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else (f"/uploads/{id}/{arquivos}" if arquivos else "https://via.placeholder.com/800x400")
+    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\');"></div>' for f in arquivos])
 
     return f"""
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Laudo Técnico Pericial - {id}</title>
+    <title>Laudo Técnico - {id}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {{ --verde-escuro: #062b21; --verde-medio: #0b3b2e; --verde-claro: #1f6b4a; --bege-fundo: #e3e8e1; --bege-card: #f1f4ef; --dourado: #c8a96a; }}
         * {{ box-sizing: border-box; }}
         body {{ background-color: #222; font-family: 'Montserrat', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }}
-        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
+        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
         .header {{ background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid var(--dourado); margin-bottom: 20px; }}
         .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 42px; letter-spacing: 2px; }}
         .header p {{ margin: 5px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: 300; }}
@@ -277,7 +268,7 @@ def cliente(id: str):
         .dados-proprietario {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 12px; padding: 15px; }}
         .info-row {{ display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #d0d5cd; }}
         .info-row:last-child {{ border: none; }}
-        .info-row .icon {{ font-size: 24px; width: 30px; text-align: center; }}
+        .icon {{ font-size: 24px; width: 30px; text-align: center; }}
         .info-text label {{ display: block; font-size: 11px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; }}
         .info-text span {{ font-size: 15px; font-weight: 600; color: #333; }}
         .foto-principal {{ border: 5px solid #fff; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; height: 250px; }}
