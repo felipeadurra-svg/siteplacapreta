@@ -1,3 +1,202 @@
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from typing import Optional
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from openai import OpenAI
+import os
+import uuid
+import json
+import base64
+import re
+
+app = FastAPI()
+
+# 🔑 Configuração da OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+MODEL = "gpt-4o"
+
+# 🌍 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 📁 Configuração de Diretórios
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+def salvar_imagem(file: UploadFile, path: str):
+    if not file: return None
+    try:
+        content = file.file.read()
+        if not content: return None
+        with open(path, "wb") as f:
+            f.write(content)
+        return path
+    except: return None
+
+def to_base64(path):
+    if not path or not os.path.exists(path): return None
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+def gerar_prompt():
+    return """
+Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
+Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+
+⚠️ REGRAS CRÍTICAS:
+- Carros só podem conseguir placa preta com 30 anos de fabricação ou mais
+- Carros rebaixados , motor nao original , automaticamente reprovados
+- Use exatamente os tópicos solicitados abaixo.
+- Em cada tópico, descreva o que vê tecnicamente.
+- Linguagem técnica estilo clube de antigomobilismo
+⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MODERADO):
+- Redução de 1 ponto: Para itens desgastados, substituições por peças de época não originais ou detalhes estéticos menores. (Padrão para a maioria dos desvios).
+- Redução de 2 ou mais pontos: APENAS para faltas graves de originalidade, modificações irreversíveis ou itens que descaracterizam o modelo (ex: motor de outra marca, teto solar adaptado, cor não existente no catálogo do ano).
+Formato obrigatório para descontos (NÃO USE EMOJIS OU SÍMBOLOS ESPECIAIS):
+“Redução de X ponto(s) devido a [descrição objetiva]”
+- Base exclusivamente em evidência visual
+- Todo desconto deve vir acompanhado de justificativa técnica objetiva
+- Se houver desconto de pontos, adicione uma linha "OBS: [justificativa]".
+-Só desconte pontos 1 vez pelo mesmo motivo, mesmo que apareça em mais de um item (ex: motor não original pode aparecer em mecânica e conservação, mas só deve ser descontado uma vez).
+- Mantenha o Subtotal no formato "Subtotal: XX/XX".
+
+FORMATO DE RESPOSTA OBRIGATÓRIO:
+
+📌 IDENTIFICAÇÃO DO VEÍCULO
+- Marca
+- Modelo
+- Ano estimado
+- Geração
+- Confiança da análise (baixa / média / alta)
+
+
+1- EXTERIOR  
+-Alinhamento de porta: [comentário]
+-Pintura: [comentário]
+-Cromados e lanternas: [comentário]
+-Rodas e pneus: [comentário]
+-Sinais de restauração: [comentário]
+Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
+
+2- INTERIOR  
+-Painel: [comentário]
+-Volante: [comentário]
+-Bancos e tecidos: [comentário]
+-Forração: [comentário]
+-Conservação geral: [comentário]
+Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
+
+3- MECÂNICA 
+-Organização do cofre: [comentário]
+-Fiação aparente: [comentário]
+-Componentes originais visíveis: [comentário]
+-Suspensão e rodas: [comentário]
+Subtotal: XX/30
+OBS: [Se houver desconto, descreva aqui, senão ignore]
+
+4- CONSERVAÇÃO 
+-Estrutura aparente: [comentário]
+-Borrachas: [comentário]
+-Desgaste natural: [comentário]
+Subtotal: XX/10
+OBS: [Se houver desconto, descreva aqui, senão ignore]
+
+📊 RESULTADO FINAL
+TOTAL: XX / 100
+🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
+
+💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
+💸 Venda rápida: R$ XXXXX a R$ XXXXX
+💰 Mercado particular: R$ XXXXX a R$ XXXXX
+🏆 Pós placa preta: R$ XXXXX a R$ XXXXX
+"""
+
+def gerar_relatorio(fotos):
+    imgs = []
+    for _, path in fotos.items():
+        if not path or not os.path.exists(path): continue
+        b64 = to_base64(path)
+        if b64: imgs.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
+            temperature=0.1
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Erro na IA: {str(e)}"
+
+@app.post("/avaliacao")
+async def avaliacao(
+    nome: Optional[str] = Form(None), marca: Optional[str] = Form(None), 
+    modelo: Optional[str] = Form(None), ano: Optional[str] = Form(None),
+    foto_frente: Optional[UploadFile] = File(None), foto_traseira: Optional[UploadFile] = File(None),
+    foto_lateral_direita: Optional[UploadFile] = File(None), foto_lateral_esquerda: Optional[UploadFile] = File(None),
+    foto_interior: Optional[UploadFile] = File(None), foto_painel: Optional[UploadFile] = File(None),
+    foto_motor: Optional[UploadFile] = File(None), foto_chassi: Optional[UploadFile] = File(None),
+):
+    cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
+    pasta = os.path.join(UPLOAD_DIR, cliente_id)
+    os.makedirs(pasta, exist_ok=True)
+    fotos_map = {
+        "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
+        "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
+        "lat1": salvar_imagem(foto_lateral_direita, f"{pasta}/lat1.jpg"),
+        "lat2": salvar_imagem(foto_lateral_esquerda, f"{pasta}/lat2.jpg"),
+        "interior": salvar_imagem(foto_interior, f"{pasta}/interior.jpg"),
+        "motor": salvar_imagem(foto_motor, f"{pasta}/motor.jpg"),
+        "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
+        "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
+    }
+    relatorio = gerar_relatorio(fotos_map)
+    
+    dados = {
+        "nome": nome, "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
+        "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
+        "relatorio_ai": relatorio
+    }
+    with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=4)
+    return {"ok": True, "id": cliente_id}
+
+@app.get("/avaliacoes", response_class=HTMLResponse)
+def avaliacoes():
+    clientes = []
+    if os.path.exists(UPLOAD_DIR):
+        for pasta in os.listdir(UPLOAD_DIR):
+            path = os.path.join(UPLOAD_DIR, pasta, "dados.json")
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    clientes.append((pasta, json.load(f)))
+    
+    clientes.reverse()
+    html = """<html><head><meta charset="UTF-8"><style>
+        body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 4px solid #0b3b2e; }
+        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #0b3b2e; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; }
+    </style></head><body><h1>🚗 Dashboard de Avaliações</h1><div class="grid">"""
+    for id_, d in clientes:
+        v = d.get("veiculo", {})
+        html += f"""<div class="card"><b>{d.get('nome')}</b><br>
+        🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
+        <a class="btn" href="/cliente/{id_}">Abrir Laudo Técnico</a></div>"""
+    html += "</div></body></html>"
+    return HTMLResponse(html)
+
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def cliente(id: str):
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
