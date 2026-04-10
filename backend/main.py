@@ -67,7 +67,7 @@ Formato obrigatório para descontos:
 
 ────────────────────────────────────────
 
- IDENTIFICAÇÃO DO VEÍCULO
+📌 IDENTIFICAÇÃO DO VEÍCULO
 - Marca
 - Modelo
 - Ano estimado
@@ -78,29 +78,29 @@ Formato obrigatório para descontos:
 
 I. 🚗 EXTERIOR E CARROCERIA (0–30 pts)
 Avaliar: alinhamento, pintura, cromados, rodas e restauração.
- Apresentar observações técnicas e descontos.
- Subtotal: XX / 30
+📌 Apresentar observações técnicas e descontos.
+📌 Subtotal: XX / 30
 
 ────────────────────────────────────────
 
 II. 🪑 INTERIOR E TAPEÇARIA (0–30 pts)
 Avaliar: painel, volante, bancos, forrações e conservação.
- Apresentar observações técnicas e descontos.
- Subtotal: XX / 30
+📌 Apresentar observações técnicas e descontos.
+📌 Subtotal: XX / 30
 
 ────────────────────────────────────────
 
 III. 🧰 MECÂNICA VISUAL / COFRE (0–30 pts)
 Avaliar: cofre, fiação, componentes originais e suspensão visual.
- Apresentar observações técnicas e descontos.
- Subtotal: XX / 30
+📌 Apresentar observações técnicas e descontos.
+📌 Subtotal: XX / 30
 
 ────────────────────────────────────────
 
 IV. 🧼 CONSERVAÇÃO GERAL (0–10 pts)
 Avaliar: estrutura, borrachas, cuidado e desgaste natural.
- Apresentar observações técnicas e descontos.
- Subtotal: XX / 10
+📌 Apresentar observações técnicas e descontos.
+📌 Subtotal: XX / 10
 
 ────────────────────────────────────────
 
@@ -237,11 +237,11 @@ def cliente(id: str):
         except: return "Erro ao processar seção."
 
     sec_ident = extrair_secao("IDENTIFICAÇÃO DO VEÍCULO", "I.", texto)
-    sec_ext = extrair_secao("I.  EXTERIOR", "II.", texto)
-    sec_int = extrair_secao("II.  INTERIOR", "III.", texto)
-    sec_mec = extrair_secao("III.  MECÂNICA", "IV.", texto)
-    sec_cons = extrair_secao("IV.  CONSERVAÇÃO", "RESULTADO FINAL", texto)
-    sec_recom = extrair_secao(" RECOMENDAÇÕES", "ASSINATURA", texto)
+    sec_ext = extrair_secao("I. 🚗 EXTERIOR", "II.", texto)
+    sec_int = extrair_secao("II. 🪑 INTERIOR", "III.", texto)
+    sec_mec = extrair_secao("III. 🧰 MECÂNICA", "IV.", texto)
+    sec_cons = extrair_secao("IV. 🧼 CONSERVAÇÃO", "RESULTADO FINAL", texto)
+    sec_recom = extrair_secao("🧠 RECOMENDAÇÕES", "ASSINATURA", texto)
 
     # Capturas de Score, Veredito e Mercado
     score = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
