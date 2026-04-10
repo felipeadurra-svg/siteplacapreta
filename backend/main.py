@@ -62,7 +62,12 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 - Base exclusivamente em evidência visual
 - Todo desconto deve vir acompanhado de justificativa técnica objetiva
 
-Formato obrigatório para descontos:
+⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MODERADO):
+- Redução de 1 ponto: Para itens desgastados, substituições por peças de época não originais ou detalhes estéticos menores. (Padrão para a maioria dos desvios).
+- Redução de 2 ou mais pontos: APENAS para faltas graves de originalidade, modificações irreversíveis ou itens que descaracterizam o modelo (ex: motor de outra marca, teto solar adaptado, cor não existente no catálogo do ano).
+
+
+Formato obrigatório para descontos (NÃO USE EMOJIS OU SÍMBOLOS ESPECIAIS):
 “Redução de X ponto(s) devido a [descrição objetiva]”
 
 ────────────────────────────────────────
