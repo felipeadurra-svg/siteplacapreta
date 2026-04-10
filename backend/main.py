@@ -49,66 +49,66 @@ def to_base64(path):
 
 def gerar_prompt():
     return """
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
-Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
-
-PROTOCOLO DE AVALIAÇÃO TÉCNICA - PLACA PRETA
-[CRITÉRIOS DE ELEGIBILIDADE E REPROVAÇÃO]
-REQUISITO OBRIGATÓRIO: O veículo deve possuir 30 anos ou mais de fabricação.
-REPROVAÇÃO AUTOMÁTICA: Veículos com suspensão rebaixada ou motorização não original.
-ESTILO DE LINGUAGEM: Técnica, formal, padrão clube de antigomobilismo.
-[DIRETRIZES DE PONTUAÇÃO E JUSTIFICATIVA]
-RIGOR: Moderado.
-REDUÇÃO DE 1 PONTO: Itens desgastados, peças de época não originais ou detalhes estéticos menores.
-REDUÇÃO DE 2 OU MAIS PONTOS: Faltas graves, modificações irreversíveis, itens fora de catálogo ou descaracterização.
-REGRA DE OURO: Não penalizar o mesmo erro em mais de um tópico.
-FORMATO DE DESCONTO: "Redução de X ponto(s) devido a [descrição objetiva]"
-OBSERVAÇÃO: Todo desconto exige uma linha "OBS: [justificativa técnica]".
-[ESTRUTURA DE TÓPICOS E CÁLCULO]
-EXTERIOR (LATARIA, PINTURA, CROMADOS E VIDROS): Valor Máximo 30 pontos.
-INTERIOR (ESTOFAMENTO, PAINEL E GUARNIÇÕES): Valor Máximo 30 pontos.
-MECÂNICA (MOTOR E TRANSMISSÃO): Valor Máximo 30 pontos.
-CONSERVAÇÃO E COMPLEMENTARES (RODAS, PNEUS E LUZES): Valor Máximo 10 pontos.
-[LÓGICA DE EXECUÇÃO]
-Descreva tecnicamente o que é visto em cada tópico antes de aplicar a pontuação.
-Realize o cálculo de subtração para cada subtotal (Máximo - Descontos).
-Formato do Subtotal: "Subtotal: XX/XX".
-CONFERÊNCIA: O Total Final deve ser a soma exata dos 4 subtotais.
-RESULTADO FINAL: Exibir Total XX/100 e Status (Aprovado se >= 80).
-FORMATO DE RESPOSTA OBRIGATÓRIO (MANTENHA OS NÚMEROS):
+Role: Você é um Perito Automotivo Especialista em Antigomobilismo e Originalidade.
+Tarefa: Preencher um Laudo Técnico Pericial de Placa Preta com base em evidências visuais e diretrizes rigorosas.
+Regras Críticas (Protocolo de Reprovação):
+Veículos com menos de 30 anos: REPROVADOS.
+Suspensão rebaixada ou motor não original: REPROVADO AUTOMATICAMENTE.
+Diretrizes de Pontuação (Rigor Moderado):
+Redução de 1 ponto: Desgastes naturais, peças de época não originais ou detalhes estéticos.
+Redução de 2+ pontos: Modificações irreversíveis, itens fora de catálogo ou descaracterização grave.
+Regra de Ouro: Não desconte o mesmo item em dois tópicos diferentes. Se descontar no exterior, não desconte na conservação.
+Lógica de Cálculo:
+Inicie cada tópico com a pontuação máxima (30 ou 10).
+Subtraia os pontos conforme as observações técnicas.
+O TOTAL deve ser a soma exata de (I + II + III + IV).
+Dados do Veículo para este Laudo:
+Veículo: [Inserir Marca/Modelo/Ano aqui - ex: VW Fusca 1980]
+Proprietário: [Inserir Nome]
+Pontos observados para desconto: [Listar aqui, ex: Desgaste no estofamento e pintura queimada no capô]
+Formato de Saída (Siga rigorosamente):
 
 I. 🚗 EXTERIOR E CARROCERIA (0-30 pts)
-EXTERIOR
-[Texto técnico aqui]
-Subtotal: XX/30
-OBS: [Justificativa]
+-Alinhamento de porta: comentario
+-Pintura : comentario
+-Cromados e lanternas :comentario
+-Rodas e pneus :comentario
+-Sinais de restauração: comentario
+OBS: se hover desconto  comentario
+Subtotal : 30/30
 
 II. 💺 INTERIOR E TAPEÇARIA (0-30 pts)
-INTERIOR
-[Texto técnico aqui]
-Subtotal: XX/30
-OBS: [Justificativa]
+-Painel:comentario
+-Volante:comentario
+-Bancos e tecidos:comentario
+-Forração:comentario
+-Conservação geral:comentario	
+OBS: se hover desconto  comentario
+Subtotal : 30/30
 
 III. 🔧 MECÂNICA VISUAL / COFRE (0-30 pts)
-MECÂNICA
-[Texto técnico aqui]
-Subtotal: XX/30
-OBS: [Justificativa]
+-Organização do cofre:comentario
+-Fiação aparente:comentario
+-Componentes originais visiveis:comentario
+-Suspensao e rodas:comentario
+OBS: se hover desconto  comentario
+Subtotal : 30/30
 
 IV. ✨ CONSERVAÇÃO GERAL (0-10 pts)
-CONSERVAÇÃO
-[Texto técnico aqui]
-Subtotal: XX/10
-OBS: [Justificativa]
+-Estrutura aparente:comentario
+-Borrachas:comentario
+-Desgastes natural :comentario
+OBS: se hover desconto  comentario
+Subtotal : 10/10
 
 📊 RESULTADO FINAL
 TOTAL: XX / 100
-🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
+🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta (Mínimo 80 pontos)
 
 💰 ANÁLISE DE MERCADO
-💸 Venda rápida: R$ XXXXX
-💰 Mercado particular: R$ XXXXX
-🏆 Pós placa preta: R$ XXXXX
+💸 Venda rápida: R$ [Valor]
+💰 Mercado particular: R$ [Valor]
+🏆 Pós placa preta: R$ [Valor]
 """
 
 def gerar_relatorio(fotos):
