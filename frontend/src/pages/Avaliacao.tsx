@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import VehicleForm, { type AvaliacaoFormData } from "@/components/VehicleForm";
 import PhotoUpload, { type PhotoData } from "@/components/PhotoUpload";
 import PaymentPage from "@/components/PaymentPage";
-import { CheckCircle, FileText, Download } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -15,10 +15,9 @@ const Avaliacao = () => {
   const [formData, setFormData] = useState<AvaliacaoFormData | null>(null);
   const [photos, setPhotos] = useState<PhotoData>({});
   const [isProcessing, setIsProcessing] = useState(false);
-  const [laudoHtml, setLaudoHtml] = useState<string | null>(null); // Armazena o laudo gerado
 
   const stepIndex = { form: 0, photos: 1, payment: 2, success: 3 };
-  const steps = ["Dados", "Fotos", "Pagamento", "Resultado"];
+  const steps = ["Dados", "Fotos", "Pagamento", "Concluído"];
 
   const handleFormSubmit = (data: AvaliacaoFormData) => {
     setFormData(data);
@@ -30,46 +29,66 @@ const Avaliacao = () => {
     setCurrentStep("payment");
   };
 
+  // 🚀 ENVIO PARA BACKEND
   const enviarParaBackend = async () => {
     if (!formData) return;
+
     const form = new FormData();
 
-    // Cliente e Veículo
+    // 👤 cliente
     form.append("nome", formData.nome);
+    form.append("email", formData.email);
+    form.append("telefone", formData.telefone);
+    form.append("cidade", formData.cidade);
+    form.append("estado", formData.estado);
+
+    // 🚗 veículo
     form.append("marca", formData.marca);
     form.append("modelo", formData.modelo);
     form.append("ano", formData.ano);
+    form.append("placa", formData.placa);
+    form.append("cor", formData.cor);
+    form.append("motorizacao", formData.motorizacao);
+    form.append("observacao", formData.observacao || "");
 
-    // Fotos
+    // 📸 DEBUG + ENVIO DAS FOTOS
+    console.log("🔥 FOTOS QUE ESTÃO SENDO ENVIADAS:");
     Object.entries(photos).forEach(([key, file]) => {
+      console.log(key, file);
+
       if (file instanceof File) {
         form.append(`foto_${key}`, file);
       }
     });
 
-    const res = await fetch("https://siteplacapreta.onrender.com/avaliacao", {
+    const res = await fetch("//siteplacapreta.onrender.com/avaliacao", {
       method: "POST",
       body: form,
     });
 
-    if (!res.ok) throw new Error("Erro ao gerar laudo");
+    if (!res.ok) {
+      throw new Error("Erro ao enviar avaliação");
+    }
+
     return await res.json();
   };
 
   const handlePayment = async () => {
     setIsProcessing(true);
+
     try {
       const resposta = await enviarParaBackend();
-      
-      if (resposta.html_laudo) {
-        setLaudoHtml(resposta.html_laudo); // Salva o HTML recebido
+      console.log("🔥 RESPOSTA BACKEND:", resposta);
+
+      setTimeout(() => {
+        setIsProcessing(false);
         setCurrentStep("success");
-      }
+      }, 1200);
+
     } catch (err) {
       console.error(err);
-      alert("Erro ao processar avaliação. Tente novamente.");
-    } finally {
       setIsProcessing(false);
+      alert("Erro ao enviar avaliação");
     }
   };
 
@@ -80,60 +99,55 @@ const Avaliacao = () => {
       <main className="pt-16">
         <div className="container py-12 px-4">
 
-          {/* Stepper Visual */}
+          {/* STEPPER */}
           <div className="flex items-center justify-center gap-2 mb-12">
             {steps.map((label, i) => (
               <div key={label} className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                  stepIndex[currentStep] >= i ? "bg-yellow-500 text-black" : "bg-gray-300"
+                  stepIndex[currentStep] >= i
+                    ? "bg-yellow-500 text-black"
+                    : "bg-gray-300"
                 }`}>
                   {i + 1}
                 </div>
-                <span className="hidden sm:inline text-xs">{label}</span>
+                <span className="text-xs">{label}</span>
               </div>
             ))}
           </div>
 
-          {/* Lógica de Etapas */}
-          {currentStep === "form" && <VehicleForm onSubmit={handleFormSubmit} />}
+          {/* ETAPAS */}
+          {currentStep === "form" && (
+            <VehicleForm onSubmit={handleFormSubmit} />
+          )}
 
           {currentStep === "photos" && (
-            <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />
+            <PhotoUpload
+              onSubmit={handlePhotosSubmit}
+              onBack={() => setCurrentStep("form")}
+            />
           )}
 
           {currentStep === "payment" && (
-            <PaymentPage 
-              onPaymentConfirm={handlePayment} 
-              onBack={() => setCurrentStep("photos")} 
-              isProcessing={isProcessing} 
+            <PaymentPage
+              onPaymentConfirm={handlePayment}
+              onBack={() => setCurrentStep("photos")}
+              isProcessing={isProcessing}
             />
           )}
 
           {currentStep === "success" && (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-green-50 border border-green-200 p-6 rounded-lg mb-8 text-center">
-                <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2" />
-                <h2 className="text-2xl font-bold text-green-800">Pagamento Confirmado e Laudo Gerado!</h2>
-                <p className="text-green-700">Veja abaixo o resultado da sua perícia técnica.</p>
-                <div className="mt-4 flex justify-center gap-4">
-                    <Button onClick={() => window.print()} variant="outline" className="gap-2">
-                        <Download size={18} /> Baixar PDF
-                    </Button>
-                    <Link to="/">
-                        <Button className="gap-2"> <FileText size={18} /> Nova Avaliação</Button>
-                    </Link>
-                </div>
-              </div>
+            <div className="text-center">
+              <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
+              <h2 className="text-2xl font-bold mt-4">
+                Avaliação enviada com sucesso!
+              </h2>
+              <p className="text-gray-500 mt-2">
+                Você receberá o resultado no seu email.
+              </p>
 
-              {/* RENDERIZAÇÃO DO LAUDO VINDO DO BACKEND */}
-              {laudoHtml ? (
-                <div 
-                  className="laudo-container shadow-2xl rounded-lg overflow-hidden bg-white"
-                  dangerouslySetInnerHTML={{ __html: laudoHtml }} 
-                />
-              ) : (
-                <div className="p-20 text-center">Carregando laudo...</div>
-              )}
+              <Link to="/">
+                <Button className="mt-6">Voltar ao início</Button>
+              </Link>
             </div>
           )}
 
