@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from typing import Optional
 from datetime import datetime
@@ -141,7 +141,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -176,7 +176,9 @@ async def avaliacao(
     }
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
-    return {"ok": True, "id": cliente_id}
+    
+    # Redireciona diretamente para o laudo após salvar
+    return RedirectResponse(url=f"/cliente/{cliente_id}", status_code=303)
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def avaliacoes():
@@ -199,7 +201,7 @@ def avaliacoes():
         v = d.get("veiculo", {})
         html += f"""<div class="card"><b>{d.get('nome')}</b><br>
         🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
-        <a class="btn" href="/cliente/{id_}">Abrir Laudo Técnico</a></div>"""
+        <a class="btn" href="/cliente/{id_}">Ver Relatório</a></div>"""
     html += "</div></body></html>"
     return HTMLResponse(html)
 
@@ -244,11 +246,9 @@ def cliente(id: str):
     v_part = get_val(r"Mercado particular:?\s*(.*)", texto)
     v_pos = get_val(r"Pós placa preta:?\s*(.*)", texto)
 
-    # --- LÓGICA DE FOTOS CORRIGIDA ---
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     
-    # Busca especificamente pela frente.jpg ou a primeira da lista
     if "frente.jpg" in arquivos:
         foto_capa = f"/uploads/{id}/frente.jpg"
     elif arquivos:
@@ -257,7 +257,6 @@ def cliente(id: str):
         foto_capa = "https://via.placeholder.com/800x400?text=Sem+Foto"
 
     fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;"></div>' for f in arquivos])
-    # ---------------------------------
 
     return f"""
 <!DOCTYPE html>
