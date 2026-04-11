@@ -55,6 +55,7 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 ⚠️ REGRAS CRÍTICAS:
 - Carros só podem conseguir placa preta com 30 anos de fabricação ou mais
 - Carros rebaixados , motor nao original , automaticamente reprovados
+-Quando reprovado por rebaixamento ou motor, deixar claro na observação que foi reprovado por esse motivo específico, e não por outros itens
 - Use exatamente os tópicos solicitados abaixo.
 - Em cada tópico, descreva o que vê tecnicamente.
 - Linguagem técnica estilo clube de antigomobilismo
