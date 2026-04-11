@@ -126,6 +126,7 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 - A palavra "Subtotal" deve ser escrita COMPLETA e EXATAMENTE assim:
 "Subtotal: X/10"
 - É PROIBIDO escrever "Sub" ou qualquer variação incompleta.
+- Se NÃO houver defeitos na conservação → obrigatoriamente 10/10
 - Respostas fora desse padrão são inválidas.
 
 TOTAL: XX / 100
