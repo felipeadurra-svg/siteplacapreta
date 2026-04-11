@@ -110,6 +110,7 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 -Suspensão e rodas: [comentário]
 Subtotal: XX/30
 OBS: [Se houver desconto, descreva aqui, senão ignore]
+Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução de pontos na seção de mecânica, e mencione que o rebaixamento é um fator que impede a aprovação para placa preta.
 
 4- CONSERVAÇÃO 
 -Estrutura aparente: [comentário]
@@ -211,38 +212,36 @@ def cliente(id: str):
     
     texto = d.get("relatorio_ai", "")
 
+    # ESTA FUNÇÃO PRECISA ESTAR RECUADA
     def extrair_secao_v2(prefixo, proximo, original):
-    try:
-        # Busca do prefixo até o próximo marcador OU até o fim da string ($)
-        padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
-        match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
-        
-        if match:
-            bloco_total = match.group(1).strip()
+        try:
+            # Recuo de 8 espaços aqui (corpo da função interna)
+            padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
+            match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             
-            # Melhora a captura do Subtotal para aceitar números ou traços
-            sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
-            
-            if sub_match:
-                sub_val = sub_match.group(1).replace(" ", "")
-            else:
-                # Tenta achar qualquer formato de fração no bloco
-                fallback = re.findall(r"([\d\-]+\s*/\s*[\d\-]+)", bloco_total)
-                sub_val = fallback[-1].replace(" ", "") if fallback else "0/10"
-            
-            # Extração da OBS
-            obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
-            obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
-            
-            # Limpeza do texto para o corpo do laudo
-            res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
-            res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
-            
-            return res_limpo.strip(), sub_val, obs_val
-            
-        return "Dados não localizados.", "0/0", "N/A"
-    except Exception as e:
-        return f"Erro: {str(e)}", "0/0", "Erro"
+            if match:
+                bloco_total = match.group(1).strip()
+                sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
+                
+                if sub_match:
+                    sub_val = sub_match.group(1).replace(" ", "")
+                else:
+                    fallback = re.findall(r"([\d\-]+\s*/\s*[\d\-]+)", bloco_total)
+                    sub_val = fallback[-1].replace(" ", "") if fallback else "0/10"
+                
+                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
+                obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
+                
+                res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
+                res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
+                
+                return res_limpo.strip(), sub_val, obs_val
+                
+            return "Dados não localizados.", "0/0", "N/A"
+        except Exception as e:
+            return f"Erro: {str(e)}", "0/0", "Erro"
+
+    # ESTAS LINHAS VOLTAM PARA O RECUO DE 4 ESPAÇOS (DENTRO DA FUNÇÃO CLIENTE)
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
@@ -250,6 +249,8 @@ def cliente(id: str):
     
     score = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
     veredito = "APROVADO" if "APROVADO" in texto.upper() else "REPROVADO"
+    
+    # ... continua o restante do código mantendo o recuo ...
     
     def get_val(regex, txt):
         m = re.search(regex, txt, re.IGNORECASE)
