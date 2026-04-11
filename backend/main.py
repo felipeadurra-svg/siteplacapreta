@@ -53,22 +53,28 @@ Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
 Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 
 ⚠️ REGRAS CRÍTICAS:
-- Carros só podem conseguir placa preta com 30 anos de fabricação ou mais
-- Carros rebaixados , motor nao original , automaticamente reprovados
--Quando reprovado por rebaixamento ou motor, deixar claro na observação que foi reprovado por esse motivo específico, e não por outros itens
+- Carros só podem conseguir placa preta com 30 anos de fabricação ou mais.
+- Carros rebaixados ou com motor não original devem ser AUTOMATICAMENTE REPROVADOS.
 - Use exatamente os tópicos solicitados abaixo.
-- Em cada tópico, descreva o que vê tecnicamente.
-- Linguagem técnica estilo clube de antigomobilismo
-⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MODERADO):
-- Redução de 1 ponto: Para itens desgastados, substituições por peças de época não originais ou detalhes estéticos menores. (Padrão para a maioria dos desvios).
-- Redução de 2 ou mais pontos: APENAS para faltas graves de originalidade, modificações irreversíveis ou itens que descaracterizam o modelo (ex: motor de outra marca, teto solar adaptado, cor não existente no catálogo do ano).
-Formato obrigatório para descontos (NÃO USE EMOJIS OU SÍMBOLOS ESPECIAIS):
+- Linguagem técnica estilo clube de antigomobilismo.
+
+⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MATEMÁTICO ABSOLUTO):
+- Exterior: Inicia com 30 pontos.
+- Interior: Inicia com 30 pontos.
+- Mecânica: Inicia com 30 pontos.
+- Conservação: Inicia com 10 pontos.
+- Redução de 1 ponto: Itens desgastados ou peças de época não originais.
+- Redução de 2 ou mais pontos: Faltas graves (ex: motor de outra marca, rebaixamento).
+- Se houver redução, o cálculo do Subtotal deve ser exato (Total da seção - reduções).
+- Não invente pontuações aleatórias. Se subtraiu 1, de 30 vai para 29.
+
+Formato obrigatório para descontos:
 “Redução de X ponto(s) devido a [descrição objetiva]”
-- Base exclusivamente em evidência visual
-- Todo desconto deve vir acompanhado de justificativa técnica objetiva
-- Se houver desconto de pontos, adicione uma linha "OBS: [justificativa]".
--Só desconte pontos 1 vez pelo mesmo motivo, mesmo que apareça em mais de um item (ex: motor não original pode aparecer em mecânica e conservação, mas só deve ser descontado uma vez).
+
+- Todo desconto deve vir acompanhado de justificativa técnica objetiva na linha OBS.
+- Só desconte pontos 1 vez pelo mesmo motivo.
 - Mantenha o Subtotal no formato "Subtotal: XX/XX".
+- NÃO USE EMOJIS (como 📊, 🏁) no corpo do texto, apenas o texto puro.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 
@@ -78,7 +84,6 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 - Ano estimado
 - Geração
 - Confiança da análise (baixa / média / alta)
-
 
 1- EXTERIOR  
 -Alinhamento de porta: [comentário]
@@ -113,9 +118,8 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 Subtotal: XX/10
 OBS: [Se houver desconto, descreva aqui, senão ignore]
 
-📊 RESULTADO FINAL
 TOTAL: XX / 100
-🏁 VEREDITO: [APROVADO ou REPROVADO] para placa preta
+VEREDITO: [APROVADO ou REPROVADO] para placa preta
 
 💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
 💸 Venda rápida: R$ XXXXX a R$ XXXXX
@@ -136,7 +140,7 @@ def gerar_relatorio(fotos):
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
         return f"Erro na IA: {str(e)}"
 
@@ -209,24 +213,33 @@ def cliente(id: str):
 
     def extrair_secao_v2(prefixo, proximo, original):
         try:
-            padrao = rf"{prefixo}(.*?)(?={proximo}|$)"
+            # Captura o bloco entre prefixos com suporte a quebras de linha (DOTALL)
+            padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
+            
             if match:
-                res = match.group(1).strip()
-                sub = re.search(r"Subtotal:\s*(\d+/\d+)", res, re.IGNORECASE)
-                sub_val = sub.group(1) if sub else "-- / --"
-                obs = re.search(r"OBS:\s*(.*)", res, re.IGNORECASE)
-                obs_val = obs.group(1).strip() if obs else "Sem descontos visíveis."
-                res_limpo = re.sub(r"Subtotal:.*", "", res, flags=re.IGNORECASE)
-                res_limpo = re.sub(r"OBS:.*", "", res_limpo, flags=re.IGNORECASE).strip()
+                bloco_total = match.group(1).strip()
+                
+                # Extrai o Subtotal de dentro do bloco
+                sub_match = re.search(r"Subtotal:\s*(\d+/\d+)", bloco_total, re.IGNORECASE)
+                sub_val = sub_match.group(1) if sub_match else "-- / --"
+                
+                # Extrai a OBS (pega tudo após OBS: até o final ou até o Subtotal)
+                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
+                obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
+                
+                # Limpa o texto principal removendo as linhas técnicas de cálculo
+                res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
+                res_limpo = re.sub(r"Subtotal:.*", "", res_limpo, flags=re.IGNORECASE).strip()
+                
                 return res_limpo, sub_val, obs_val
             return "Dados não localizados.", "-- / --", "N/A"
-        except: return "Erro", "-- / --", "Erro"
+        except: return "Erro na extração.", "-- / --", "Erro"
 
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
-    sec_cons, sub_cons, obs_cons = extrair_secao_v2("4- CONSERVAÇÃO", "RESULTADO FINAL", texto)
+    sec_cons, sub_cons, obs_cons = extrair_secao_v2("4- CONSERVAÇÃO", "TOTAL:", texto)
     
     score = (re.findall(r"TOTAL:\s*(\d+)", texto) or ["00"])[-1]
     veredito = "APROVADO" if "APROVADO" in texto.upper() else "REPROVADO"
@@ -239,7 +252,6 @@ def cliente(id: str):
     v_part = get_val(r"Mercado particular:?\s*(.*)", texto)
     v_pos = get_val(r"Pós placa preta:?\s*(.*)", texto)
 
-    # --- LÓGICA DE FOTOS CORRIGIDA ---
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
     
@@ -250,7 +262,7 @@ def cliente(id: str):
     else:
         foto_capa = "https://via.placeholder.com/800x400?text=Sem+Foto"
 
-    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\'); background-size:cover; background-position:center;"></div>' for f in arquivos])
+    fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\');"></div>' for f in arquivos])
 
     return f"""
 <!DOCTYPE html>
@@ -282,7 +294,7 @@ def cliente(id: str):
         .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 8px 15px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
         .card-body {{ display: grid; grid-template-columns: 1fr 180px; padding: 12px; gap: 15px; }}
         .itens-lista {{ font-size: 11px; line-height: 1.5; color: #444; white-space: pre-wrap; }}
-        .obs-tecnica {{ font-size: 10px; background: #fff; padding: 8px; border-radius: 5px; border-left: 3px solid var(--verde-claro); }}
+        .obs-tecnica {{ font-size: 10px; background: #fff; padding: 8px; border-radius: 5px; border-left: 3px solid var(--verde-claro); overflow: hidden; }}
         .subtotal-box {{ grid-column: span 2; background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; font-size: 18px; border-radius: 5px; }}
         .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; padding: 15px; }}
         .sidebar-titulo {{ border-bottom: 2px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }}
@@ -291,7 +303,7 @@ def cliente(id: str):
         .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 8px; font-weight: 700; margin-top: 10px; }}
         .analise-mercado p {{ font-size: 12px; margin: 8px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; }}
         .foto-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }}
-        .mini-foto {{ aspect-ratio: 1; background: #ddd; border-radius: 4px; border: 1px solid #bbb; background-position: center; background-size: cover; }}
+        .mini-foto {{ aspect-ratio: 1; background-color: #ddd; border-radius: 4px; border: 1px solid #bbb; background-position: center; background-size: cover; }}
         .footer {{ margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
         .assinatura-box {{ text-align: center; width: 300px; }}
         .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 5px; }}
@@ -320,7 +332,7 @@ def cliente(id: str):
     <div class="conteudo-grid">
         <div class="col-esquerda">
             <div class="card-avaliacao">
-                <div class="card-header"><span>I. 🚗 EXTERIOR E CARROCERIA (0-30 pts)</span></div>
+                <div class="card-header"><span>I. EXTERIOR E CARROCERIA (0-30 pts)</span></div>
                 <div class="card-body">
                     <div class="itens-lista">{sec_ext}</div>
                     <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_ext}</div>
@@ -328,7 +340,7 @@ def cliente(id: str):
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header"><span>II. 💺 INTERIOR E TAPEÇARIA (0-30 pts)</span></div>
+                <div class="card-header"><span>II. INTERIOR E TAPEÇARIA (0-30 pts)</span></div>
                 <div class="card-body">
                     <div class="itens-lista">{sec_int}</div>
                     <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_int}</div>
@@ -336,7 +348,7 @@ def cliente(id: str):
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header"><span>III. 🔧 MECÂNICA VISUAL / COFRE (0-30 pts)</span></div>
+                <div class="card-header"><span>III. MECÂNICA VISUAL / COFRE (0-30 pts)</span></div>
                 <div class="card-body">
                     <div class="itens-lista">{sec_mec}</div>
                     <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_mec}</div>
@@ -344,7 +356,7 @@ def cliente(id: str):
                 </div>
             </div>
             <div class="card-avaliacao">
-                <div class="card-header"><span>IV. ✨ CONSERVAÇÃO GERAL (0-10 pts)</span></div>
+                <div class="card-header"><span>IV. CONSERVAÇÃO GERAL (0-10 pts)</span></div>
                 <div class="card-body">
                     <div class="itens-lista">{sec_cons}</div>
                     <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_cons}</div>
