@@ -120,6 +120,13 @@ Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução 
 -Desgaste natural: [comentário]
 Subtotal: XX/10
 OBS: [Se houver desconto, descreva aqui, senão ignore]
+"Subtotal: X/10"
+- É PROIBIDO quebrar a palavra "Subtotal" ou escrever apenas "Sub"
+
+- A palavra "Subtotal" deve ser escrita COMPLETA e EXATAMENTE assim:
+"Subtotal: X/10"
+- É PROIBIDO escrever "Sub" ou qualquer variação incompleta.
+- Respostas fora desse padrão são inválidas.
 
 TOTAL: XX / 100
 VEREDITO: [APROVADO ou REPROVADO] para placa preta
