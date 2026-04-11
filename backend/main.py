@@ -62,7 +62,8 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 - Exterior: Inicia com 30 pontos.
 - Interior: Inicia com 30 pontos.
 - Mecânica: Inicia com 30 pontos.
-- Conservação: Inicia com 10 pontos.
+- Conservação: Inicia com 10 pontos. 
+- REGRA DO 10/10: Se NÃO houver defeitos na seção de CONSERVAÇÃO, o subtotal DEVE ser 10/10. É terminantemente proibido atribuir 0/10 para carros conservados.
 - REGRA DO ESTADO IMPECÁVEL: Se NÃO houver reduções ou defeitos descritos em uma seção, a nota final DEVE ser obrigatoriamente a máxima (ex: 10/10) 
 - Redução de 1 ponto: Itens desgastados ou peças de época não originais.
 - Redução de 2 ou mais pontos: Faltas graves (ex: motor de outra marca, rebaixamento).
