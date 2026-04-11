@@ -213,29 +213,39 @@ def cliente(id: str):
 
     def extrair_secao_v2(prefixo, proximo, original):
         try:
-            # Captura o bloco entre prefixos com suporte a quebras de linha (DOTALL)
+            # Captura o bloco entre o título atual e o próximo (ou o fim do texto)
             padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             
             if match:
                 bloco_total = match.group(1).strip()
                 
-                # Extrai o Subtotal de dentro do bloco
-                sub_match = re.search(r"Subtotal:\s*(\d+/\d+)", bloco_total, re.IGNORECASE)
-                sub_val = sub_match.group(1) if sub_match else "-- / --"
+                # 1. Busca o Subtotal com suporte a espaços e variações (ex: 10/10, 10 / 10, Sub: 10/10)
+                # O \d+ captura qualquer número antes e depois da barra
+                sub_match = re.search(r"(?:Subtotal:|Sub:)\s*(\d+\s*/\s*\d+)", bloco_total, re.IGNORECASE)
                 
-                # Extrai a OBS (pega tudo após OBS: até o final ou até o Subtotal)
-                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
+                if sub_match:
+                    sub_val = sub_match.group(1).replace(" ", "")
+                else:
+                    # Fallback: Se não achou a palavra "Subtotal", tenta pegar qualquer formato XX/XX no bloco
+                    fallback = re.findall(r"(\d+\s*/\s*\d+)", bloco_total)
+                    sub_val = fallback[-1].replace(" ", "") if fallback else "-- / --"
+                
+                # 2. Extrai a OBS (pega tudo após 'OBS:' até o Subtotal ou fim do bloco)
+                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
                 obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
                 
-                # Limpa o texto principal removendo as linhas técnicas de cálculo
+                # 3. Limpeza do texto principal para não repetir o Subtotal no corpo do laudo
                 res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
-                res_limpo = re.sub(r"Subtotal:.*", "", res_limpo, flags=re.IGNORECASE).strip()
+                res_limpo = re.sub(r"Subtotal:.*", "", res_limpo, flags=re.IGNORECASE)
+                res_limpo = re.sub(r"Sub:.*", "", res_limpo, flags=re.IGNORECASE)
+                res_limpo = re.sub(r"\nSub.*$", "", res_limpo, flags=re.MULTILINE | re.IGNORECASE) # Remove "Sub" quebrado no fim
                 
-                return res_limpo, sub_val, obs_val
+                return res_limpo.strip(), sub_val, obs_val
+                
             return "Dados não localizados.", "-- / --", "N/A"
-        except: return "Erro na extração.", "-- / --", "Erro"
-
+        except Exception as e:
+            return f"Erro na extração: {str(e)}", "-- / --", "Erro"
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
