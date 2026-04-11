@@ -212,40 +212,37 @@ def cliente(id: str):
     texto = d.get("relatorio_ai", "")
 
     def extrair_secao_v2(prefixo, proximo, original):
-        try:
-            # Captura o bloco entre o título atual e o próximo (ou o fim do texto)
-            padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
-            match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
+    try:
+        # Busca do prefixo até o próximo marcador OU até o fim da string ($)
+        padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
+        match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
+        
+        if match:
+            bloco_total = match.group(1).strip()
             
-            if match:
-                bloco_total = match.group(1).strip()
-                
-                # 1. Busca o Subtotal com suporte a espaços e variações (ex: 10/10, 10 / 10, Sub: 10/10)
-                # O \d+ captura qualquer número antes e depois da barra
-                sub_match = re.search(r"(?:Subtotal:|Sub:)\s*(\d+\s*/\s*\d+)", bloco_total, re.IGNORECASE)
-                
-                if sub_match:
-                    sub_val = sub_match.group(1).replace(" ", "")
-                else:
-                    # Fallback: Se não achou a palavra "Subtotal", tenta pegar qualquer formato XX/XX no bloco
-                    fallback = re.findall(r"(\d+\s*/\s*\d+)", bloco_total)
-                    sub_val = fallback[-1].replace(" ", "") if fallback else "-- / --"
-                
-                # 2. Extrai a OBS (pega tudo após 'OBS:' até o Subtotal ou fim do bloco)
-                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
-                obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
-                
-                # 3. Limpeza do texto principal para não repetir o Subtotal no corpo do laudo
-                res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
-                res_limpo = re.sub(r"Subtotal:.*", "", res_limpo, flags=re.IGNORECASE)
-                res_limpo = re.sub(r"Sub:.*", "", res_limpo, flags=re.IGNORECASE)
-                res_limpo = re.sub(r"\nSub.*$", "", res_limpo, flags=re.MULTILINE | re.IGNORECASE) # Remove "Sub" quebrado no fim
-                
-                return res_limpo.strip(), sub_val, obs_val
-                
-            return "Dados não localizados.", "-- / --", "N/A"
-        except Exception as e:
-            return f"Erro na extração: {str(e)}", "-- / --", "Erro"
+            # Melhora a captura do Subtotal para aceitar números ou traços
+            sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
+            
+            if sub_match:
+                sub_val = sub_match.group(1).replace(" ", "")
+            else:
+                # Tenta achar qualquer formato de fração no bloco
+                fallback = re.findall(r"([\d\-]+\s*/\s*[\d\-]+)", bloco_total)
+                sub_val = fallback[-1].replace(" ", "") if fallback else "0/10"
+            
+            # Extração da OBS
+            obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
+            obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
+            
+            # Limpeza do texto para o corpo do laudo
+            res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
+            res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
+            
+            return res_limpo.strip(), sub_val, obs_val
+            
+        return "Dados não localizados.", "0/0", "N/A"
+    except Exception as e:
+        return f"Erro: {str(e)}", "0/0", "Erro"
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
