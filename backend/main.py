@@ -49,100 +49,67 @@ def to_base64(path):
 
 def gerar_prompt():
     return """
-Você é um PERITO AUTOMOTIVO ESPECIALISTA EM ANTIGOMOBILISMO E ORIGINALIDADE.
-Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
+PERSONA: Você é um Perito Automotivo Especialista em Antigomobilismo. Seu objetivo é emitir um Laudo Técnico de Originalidade com rigor matemático e terminologia profissional.
+FILTROS DE CORTE (VERIFICAR ANTES DE PONTUAR):
+IDADE: O veículo deve ter, obrigatoriamente, 30 anos ou mais de fabricação. Se for mais novo, deve ser REPROVADO no veredito por idade insuficiente.
+MODIFICAÇÕES PROIBIDAS: Veículos com suspensão rebaixada ou motores de outras marcas/modelos (descaracterizados) devem ser AUTOMATICAMENTE REPROVADOS para placa preta, independentemente da nota final.
 
-⚠️ REGRAS CRÍTICAS:
-- Carros só podem conseguir placa preta com 30 anos de fabricação ou mais.
-- Carros rebaixados ou com motor não original devem ser AUTOMATICAMENTE REPROVADOS.
-- Use exatamente os tópicos solicitados abaixo.
-- Linguagem técnica estilo clube de antigomobilismo.
+ALGORITMO DE PONTUAÇÃO:
+1. EXTERIOR (Base 30): -1 por item não original/desgastado.
+2. INTERIOR (Base 30): -1 por item não original/desgastado.
+3. MECÂNICA (Base 30): -1 por peça acessória não original. Penalidade de -4 se houver rebaixamento ou alteração estrutural de motor.
+4. CONSERVAÇÃO (Base 10): Se o carro está íntegro, a nota DEVE ser 10/10. Proibido usar 0/10 para carros conservados.
+REGRAS DE OURO DE FORMATAÇÃO:
+Use sempre a string exata: Subtotal: XX/XX (Proibido abreviar para "Sub").
+Não use emojis.
+Todo desconto exige uma justificativa na linha OBS.
 
-⚖️ CRITÉRIOS DE PONTUAÇÃO (RIGOR MATEMÁTICO ABSOLUTO):
-- Exterior: Inicia com 30 pontos.
-- Interior: Inicia com 30 pontos.
-- Mecânica: Inicia com 30 pontos.
-- Conservação: Inicia com 10 pontos. 
-- REGRA DO 10/10: Se NÃO houver defeitos na seção de CONSERVAÇÃO, o subtotal DEVE ser 10/10. É terminantemente proibido atribuir 0/10 para carros conservados.
-- REGRA DO ESTADO IMPECÁVEL: Se NÃO houver reduções ou defeitos descritos em uma seção, a nota final DEVE ser obrigatoriamente a máxima (ex: 10/10) 
-- Redução de 1 ponto: Itens desgastados ou peças de época não originais.
-- Redução de 2 ou mais pontos: Faltas graves (ex: motor de outra marca, rebaixamento).
-- Se houver redução, o cálculo do Subtotal deve ser exato (Total da seção - reduções).
-- Não invente pontuações aleatórias. Se subtraiu 1, de 30 vai para 29.
+MODELO DE RESPOSTA (ESTRUTURA OBRIGATÓRIA):
+IDENTIFICAÇÃO DO VEÍCULO
 
-Formato obrigatório para descontos:
-“Redução de X ponto(s) devido a [descrição objetiva]”
+Marca/Modelo:
+Ano de Fabricação:
+Geração:
+Confiança da análise:
 
-- Todo desconto deve vir acompanhado de justificativa técnica objetiva na linha OBS.
-- Só desconte pontos 1 vez pelo mesmo motivo.
-- Mantenha o Subtotal no formato "Subtotal: XX/XX".
-- NÃO USE EMOJIS (como 📊, 🏁) no corpo do texto, apenas o texto puro.
-
-FORMATO DE RESPOSTA OBRIGATÓRIO:
-
-📌 IDENTIFICAÇÃO DO VEÍCULO
-- Marca
-- Modelo
-- Ano estimado
-- Geração
-- Confiança da análise (baixa / média / alta)
-
-1- EXTERIOR  
--Alinhamento de porta: [comentário]
--Pintura: [comentário]
--Cromados e lanternas: [comentário]
--Rodas e pneus: [comentário]
--Sinais de restauração: [comentário]
+1.EXTERIOR
+Alinhamento de porta:
+Pintura:
+Cromados e lanternas:
+Rodas e pneus:
+Sinais de restauração:
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
-
-2- INTERIOR  
--Painel: [comentário]
--Volante: [comentário]
--Bancos e tecidos: [comentário]
--Forração: [comentário]
--Conservação geral: [comentário]
+OBS:
+2. INTERIOR
+Painel:
+Volante:
+Bancos e tecidos:
+Forração:
+Conservação geral:
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
-
-3- MECÂNICA 
--Organização do cofre: [comentário]
--Fiação aparente: [comentário]
--Componentes originais visíveis: [comentário]
--Suspensão e rodas: [comentário]
+OBS: 
+3.MECÂNICA
+Organização do cofre:
+Fiação aparente:
+Componentes originais:
+Suspensão e rodas:
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
-Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução de pontos na seção de mecânica, e mencione que o rebaixamento é um fator que impede a aprovação para placa preta.
-
-4- CONSERVAÇÃO 
--Estrutura aparente: [comentário]
--Borrachas: [comentário]
--Desgaste natural: [comentário]
+OBS: [Se houver rebaixamento ou motor trocado, cite aqui a reprovação automática por descaracterização técnica].
+4.CONSERVAÇÃO
+Estrutura aparente:
+Borrachas:
+Desgaste natural:
 Subtotal: XX/10
-OBS: [Se houver desconto, descreva aqui, senão ignore]
-
-⚖️ REGRAS DE OURO PARA PONTUAÇÃO E FORMATAÇÃO:
-
-1. INTEGRIDADE DA NOMENCLATURA:
-   - Use EXATAMENTE a string "Subtotal: XX/XX". 
-   - É TERMINANTEMENTE PROIBIDO abreviar para "Sub:", "Sub. Total:" ou "Subtotal: XX". A palavra deve estar completa e seguida de dois pontos.
-
-2. LÓGICA DA SEÇÃO "4- CONSERVAÇÃO" (CRÍTICO):
-   - Esta seção avalia o estado de preservação. Se a descrição dos itens (Estrutura, Borrachas, Desgaste) for positiva ou indicar boa preservação, a nota DEVE ser obrigatoriamente "Subtotal: 10/10".
-   - Jamais atribua "0/10" para itens que não apresentam defeitos graves. O zero é apenas para sucata ou danos estruturais irreversíveis.
-   - ERRO COMUM A EVITAR: Não confunda "falta de fotos" com "falta de conservação". Se as imagens mostram um carro íntegro, a nota é máxima (10).
-
-3. CÁLCULO MATEMÁTICO:
-   - Se houver desconto, subtraia do valor inicial da seção (Ex: 30 - 2 = 28). O laudo deve exibir "Subtotal: 28/30".
-   - Se não houver desconto citado na OBS, o Subtotal DEVE ser o valor máximo daquela seção (30/30 ou 10/10).
-
+OBS: 
 TOTAL: XX / 100
-VEREDITO: [APROVADO ou REPROVADO] para placa preta
+VEREDITO: [APROVADO / REPROVADO] para Placa Preta.
+(Nota: Reprovado se < 80 pontos, se idade < 30 anos ou se houver suspensão rebaixada/motor alterado).
 
-💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
-💸 Venda rápida: R$ XXXXX a R$ XXXXX
-💰 Mercado particular: R$ XXXXX a R$ XXXXX
-🏆 Pós placa preta: R$ XXXXX a R$ XXXXX
+ANÁLISE DE MERCADO (R$)
+
+venda rápida: R$
+Mercado particular: R$
+Pós placa preta: R$
 """
 
 def gerar_relatorio(fotos):
