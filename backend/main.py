@@ -120,13 +120,7 @@ Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução 
 -Desgaste natural: [comentário]
 Subtotal: XX/10
 OBS: [Se houver desconto, descreva aqui, senão ignore]
-"Subtotal: X/10"
-- É PROIBIDO quebrar a palavra "Subtotal" ou escrever apenas "Sub"
 
-- A palavra "Subtotal" deve ser escrita COMPLETA e EXATAMENTE assim:
-"Subtotal: X/10"
-- É PROIBIDO escrever "Sub" ou qualquer variação incompleta.
-- Respostas fora desse padrão são inválidas.
 
 TOTAL: XX / 100
 VEREDITO: [APROVADO ou REPROVADO] para placa preta
@@ -224,31 +218,33 @@ def cliente(id: str):
     # ESTA FUNÇÃO PRECISA ESTAR RECUADA
     def extrair_secao_v2(prefixo, proximo, original):
         try:
-            # Recuo de 8 espaços aqui (corpo da função interna)
+            # Captura o bloco entre as seções
             padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             
             if match:
                 bloco_total = match.group(1).strip()
-                sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
                 
-                if sub_match:
-                    sub_val = sub_match.group(1).replace(" ", "")
-                else:
-                    fallback = re.findall(r"([\d\-]+\s*/\s*[\d\-]+)", bloco_total)
-                    sub_val = fallback[-1].replace(" ", "") if fallback else "0/10"
+                # Busca todas as ocorrências de padrões tipo "10/10" ou "28/30"
+                # Pegamos a última, que é garantidamente o Subtotal da seção
+                notas = re.findall(r"(\d+\s*/\s*\d+)", bloco_total)
+                sub_val = notas[-1].replace(" ", "") if notas else "0/10"
                 
-                obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
+                # Extrai a OBS ignorando o subtotal que vem depois dela
+                obs_match = re.search(r"OBS:\s*(.*?)(?=\nSubtotal:|\nSub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
                 obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
                 
-                res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
+                # Limpa o texto descritivo para não repetir a nota no corpo do card
+                res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.IGNORECASE | re.DOTALL)
                 res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
+                res_limpo = re.sub(r"\d+\s*/\s*\d+", "", res_limpo).strip()
                 
-                return res_limpo.strip(), sub_val, obs_val
+                return res_limpo, sub_val, obs_val
                 
             return "Dados não localizados.", "0/0", "N/A"
         except Exception as e:
             return f"Erro: {str(e)}", "0/0", "Erro"
+                
 
     # ESTAS LINHAS VOLTAM PARA O RECUO DE 4 ESPAÇOS (DENTRO DA FUNÇÃO CLIENTE)
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
