@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 
 type Step = "form" | "photos" | "payment" | "success";
 
-// Declarar o objeto MercadoPago globalmente para o TypeScript não reclamar
+// 1. Melhoria na declaração global para evitar erros de compilação
 declare global {
   interface Window {
     MercadoPago: any;
@@ -25,15 +25,18 @@ const Avaliacao = () => {
   const [laudoId, setLaudoId] = useState<string | null>(null);
 
   const steps = ["Dados", "Fotos", "Pagamento", "Concluído"];
-  const stepIndex = { form: 0, photos: 1, payment: 2, success: 3 };
+  // 2. Tipagem explícita para o indexador evitar erro de TS7053
+  const stepIndex: Record<Step, number> = { form: 0, photos: 1, payment: 2, success: 3 };
 
-  // 📦 Carregar o Script do Mercado Pago
   useEffect(() => {
+    // 3. Verificação para não carregar o script múltiplas vezes
+    if (document.getElementById("mp-sdk")) return;
+
     const script = document.createElement("script");
+    script.id = "mp-sdk";
     script.src = "https://sdk.mercadopago.com/js/v2";
     script.async = true;
     document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
   }, []);
 
   const handleFormSubmit = (data: AvaliacaoFormData) => {
@@ -46,7 +49,6 @@ const Avaliacao = () => {
     setCurrentStep("payment");
   };
 
-  // 🚀 ENVIO PARA BACKEND (Geração do Laudo via IA)
   const enviarParaBackend = async () => {
     if (!formData) return;
     const form = new FormData();
@@ -70,12 +72,16 @@ const Avaliacao = () => {
     return await res.json();
   };
 
-  // 💳 PROCESSO DE PAGAMENTO MERCADO PAGO
   const handlePayment = async () => {
+    // 4. Verificação de segurança: O SDK carregou?
+    if (!window.MercadoPago) {
+      alert("O sistema de pagamento ainda está carregando. Por favor, aguarde um instante.");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // 1. Criar preferência no backend
       const prefRes = await fetch("https://siteplacapreta.onrender.com/create_preference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,20 +90,17 @@ const Avaliacao = () => {
       
       const { id: preferenceId } = await prefRes.json();
 
-      // 2. Abrir o modal do Mercado Pago
+      // 5. Inicialização correta
       const mp = new window.MercadoPago('APP_USR-9c54b89f-6fec-46ec-bde6-e975a8f1d962', {
         locale: 'pt-BR'
       });
 
+      // Abre o checkout (procedimento padrão para integração Pro/Modal)
       mp.checkout({
         preference: { id: preferenceId },
         autoOpen: true,
       });
 
-      // Nota: Em um fluxo real, você esperaria o webhook. 
-      // Aqui vamos simular que após o fechamento/pagamento ele gera o laudo.
-      // Você pode ajustar para gerar o laudo APENAS após o sucesso nas back_urls.
-      
       const respostaLaudo = await enviarParaBackend();
       if (respostaLaudo?.id) {
         setLaudoId(respostaLaudo.id);
@@ -120,7 +123,6 @@ const Avaliacao = () => {
       <Header />
       <main className="pt-16">
         <div className="container py-12 px-4">
-          {/* STEPPER */}
           <div className="flex items-center justify-center gap-2 mb-12">
             {steps.map((label, i) => (
               <div key={label} className="flex items-center gap-2">
@@ -134,7 +136,6 @@ const Avaliacao = () => {
             ))}
           </div>
 
-          {/* CONTEÚDO DINÂMICO */}
           {currentStep === "form" && <VehicleForm onSubmit={handleFormSubmit} />}
           {currentStep === "photos" && <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />}
           {currentStep === "payment" && <PaymentPage onPaymentConfirm={handlePayment} onBack={() => setCurrentStep("photos")} isProcessing={isProcessing} />}
