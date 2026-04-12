@@ -120,21 +120,13 @@ Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução 
 -Desgaste natural: [comentário]
 Subtotal: XX/10
 OBS: [Se houver desconto, descreva aqui, senão ignore]
+"Subtotal: X/10"
+- É PROIBIDO quebrar a palavra "Subtotal" ou escrever apenas "Sub"
 
-⚖️ REGRAS DE OURO PARA PONTUAÇÃO E FORMATAÇÃO:
-
-1. INTEGRIDADE DA NOMENCLATURA:
-   - Use EXATAMENTE a string "Subtotal: XX/XX". 
-   - É TERMINANTEMENTE PROIBIDO abreviar para "Sub:", "Sub. Total:" ou "Subtotal: XX". A palavra deve estar completa e seguida de dois pontos.
-
-2. LÓGICA DA SEÇÃO "4- CONSERVAÇÃO" (CRÍTICO):
-   - Esta seção avalia o estado de preservação. Se a descrição dos itens (Estrutura, Borrachas, Desgaste) for positiva ou indicar boa preservação, a nota DEVE ser obrigatoriamente "Subtotal: 10/10".
-   - Jamais atribua "0/10" para itens que não apresentam defeitos graves. O zero é apenas para sucata ou danos estruturais irreversíveis.
-   - ERRO COMUM A EVITAR: Não confunda "falta de fotos" com "falta de conservação". Se as imagens mostram um carro íntegro, a nota é máxima (10).
-
-3. CÁLCULO MATEMÁTICO:
-   - Se houver desconto, subtraia do valor inicial da seção (Ex: 30 - 2 = 28). O laudo deve exibir "Subtotal: 28/30".
-   - Se não houver desconto citado na OBS, o Subtotal DEVE ser o valor máximo daquela seção (30/30 ou 10/10).
+- A palavra "Subtotal" deve ser escrita COMPLETA e EXATAMENTE assim:
+"Subtotal: X/10"
+- É PROIBIDO escrever "Sub" ou qualquer variação incompleta.
+- Respostas fora desse padrão são inválidas.
 
 TOTAL: XX / 100
 VEREDITO: [APROVADO ou REPROVADO] para placa preta
@@ -318,7 +310,7 @@ def cliente(id: str):
         .card-avaliacao {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }}
         .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 8px 15px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
         .card-body {{ display: grid; grid-template-columns: 1fr 180px; padding: 12px; gap: 15px; }}
-        .itens-lista {{ font-size: 11px; line-height: 1.5; color: #1a1a1a; white-space: pre-wrap; }}
+        .itens-lista {{ font-size: 11px; line-height: 1.5; color: #444; white-space: pre-wrap; }}
         .obs-tecnica {{ font-size: 10px; background: #fff; padding: 8px; border-radius: 5px; border-left: 3px solid var(--verde-claro); overflow: hidden; }}
         .subtotal-box {{ grid-column: span 2; background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; font-size: 18px; border-radius: 5px; }}
         .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; padding: 15px; }}
