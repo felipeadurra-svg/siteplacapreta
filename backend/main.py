@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,11 +16,12 @@ import re
 app = FastAPI()
 
 # 🔑 Configuração das APIs
+# Certifique-se de que estas variáveis de ambiente estão configuradas no seu servidor (Render/Vercel)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-sdk = mercadopago.SDK(os.getenv("MP_ACCESS_TOKEN")) # Use sua variável de ambiente ou coloque o Token aqui
+sdk = mercadopago.SDK(os.getenv("MP_ACCESS_TOKEN"))
 MODEL = "gpt-4o"
 
-# 🌍 CORS
+# 🌍 Configuração de CORS para permitir requisições do seu Frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,12 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 📁 Configuração de Diretórios
+# 📁 Configuração de Diretórios para Fotos
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # --- FUNÇÕES AUXILIARES ---
+
 def salvar_imagem(file: UploadFile, path: str):
     if not file: return None
     try:
@@ -79,7 +81,7 @@ Formato obrigatório para descontos:
 - Todo desconto deve vir acompanhado de justificativa técnica objetiva na linha OBS.
 - Só desconte pontos 1 vez pelo mesmo motivo.
 - Mantenha o Subtotal no formato "Subtotal: XX/XX".
-- NÃO USE EMOJIS (como 📊, 🏁) no corpo do texto, apenas o texto puro.
+- NÃO USE EMOJIS no corpo do texto, apenas o texto puro.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 
@@ -115,7 +117,6 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 -Suspensão e rodas: [comentário]
 Subtotal: XX/30
 OBS: [Se houver desconto, descreva aqui, senão ignore]
-Quando reprovado por rebaixamento da suspensao, descreva o motivo e a redução de pontos na seção de mecânica, e mencione que o rebaixamento é um fator que impede a aprovação para placa preta.
 
 4- CONSERVAÇÃO 
 -Estrutura aparente: [comentário]
@@ -138,30 +139,43 @@ def gerar_relatorio(fotos):
     for _, path in fotos.items():
         if not path or not os.path.exists(path): continue
         b64 = to_base64(path)
-        if b64: imgs.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+        if b64: 
+            imgs.append({
+                "type": "image_url", 
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+            })
     
+    if not imgs:
+        return "Erro: Nenhuma imagem processável foi enviada."
+
     try:
         response = client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "user", "content": [{"type": "text", "text": gerar_prompt()}, *imgs]}],
             temperature=0.1
         )
-        return response.choices[0].message.content
+        return response.choices.message.content
     except Exception as e:
-        return f"Erro na IA: {str(e)}"
+        return f"Erro na análise da IA: {str(e)}"
 
-# --- ROTAS ---
+# --- ROTAS DA API ---
 
 @app.post("/create_preference")
-async def create_preference(item_data: dict):
-    # Rota para criar a preferência de pagamento no Mercado Pago
+async def create_preference(request: Request):
+    """Gera o link de pagamento do Mercado Pago."""
     try:
+        # Tenta ler o corpo se existir, mas não trava se o frontend enviar vazio
+        try:
+            body = await request.json()
+        except:
+            body = {}
+
         preference_data = {
             "items": [
                 {
                     "title": "Laudo Técnico de Originalidade - MeuCarroAntigo",
                     "quantity": 1,
-                    "unit_price": 99.90, # Ajuste o valor conforme desejar
+                    "unit_price": 99.90,
                     "currency_id": "BRL"
                 }
             ],
@@ -187,9 +201,11 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None), foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None), foto_chassi: Optional[UploadFile] = File(None),
 ):
+    """Recebe fotos e dados, processa via IA e salva o resultado."""
     cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
+    
     fotos_map = {
         "frente": salvar_imagem(foto_frente, f"{pasta}/frente.jpg"),
         "traseira": salvar_imagem(foto_traseira, f"{pasta}/traseira.jpg"),
@@ -200,19 +216,25 @@ async def avaliacao(
         "painel": salvar_imagem(foto_painel, f"{pasta}/painel.jpg"),
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
     }
+    
+    # Chama a IA para analisar as fotos salvas
     relatorio = gerar_relatorio(fotos_map)
     
     dados = {
-        "nome": nome, "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
+        "nome": nome, 
+        "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
         "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
         "relatorio_ai": relatorio
     }
+    
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=4)
+        
     return {"ok": True, "id": cliente_id}
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
-def avaliacoes():
+def listar_avaliacoes():
+    """Dashboard simples para ver todos os laudos gerados."""
     clientes = []
     if os.path.exists(UPLOAD_DIR):
         for pasta in os.listdir(UPLOAD_DIR):
@@ -221,50 +243,57 @@ def avaliacoes():
                 with open(path, "r", encoding="utf-8") as f:
                     clientes.append((pasta, json.load(f)))
     
-    clientes.reverse()
+    clientes.reverse() # Mais recentes primeiro
+    
     html = """<html><head><meta charset="UTF-8"><style>
         body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; padding: 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
         .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 4px solid #0b3b2e; }
         .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #0b3b2e; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; }
     </style></head><body><h1>🚗 Dashboard de Avaliações</h1><div class="grid">"""
+    
     for id_, d in clientes:
         v = d.get("veiculo", {})
         html += f"""<div class="card"><b>{d.get('nome')}</b><br>
         🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
         <a class="btn" href="/cliente/{id_}">Abrir Laudo Técnico</a></div>"""
+    
     html += "</div></body></html>"
     return HTMLResponse(html)
 
 @app.get("/cliente/{id}", response_class=HTMLResponse)
-def cliente(id: str):
+def ver_laudo_cliente(id: str):
+    """Gera a página visual do laudo técnico certificado."""
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
     if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
+    
     with open(path, "r", encoding="utf-8") as f:
         d = json.load(f)
     
     texto = d.get("relatorio_ai", "")
 
+    # Função interna para extrair dados do texto da IA via Regex
     def extrair_secao_v2(prefixo, proximo, original):
         try:
             padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             if match:
                 bloco_total = match.group(1).strip()
+                # Busca subtotal
                 sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
-                if sub_match: sub_val = sub_match.group(1).replace(" ", "")
-                else:
-                    fallback = re.findall(r"([\d\-]+\s*/\s*[\d\-]+)", bloco_total)
-                    sub_val = fallback[-1].replace(" ", "") if fallback else "0/10"
+                sub_val = sub_match.group(1).replace(" ", "") if sub_match else "0/0"
+                # Busca OBS
                 obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
                 obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
+                # Limpa o texto principal
                 res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
                 res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
                 return res_limpo.strip(), sub_val, obs_val
             return "Dados não localizados.", "0/0", "N/A"
-        except Exception as e:
-            return f"Erro: {str(e)}", "0/0", "Erro"
+        except:
+            return "Erro no processamento.", "0/0", "Erro"
 
+    # Processamento das seções para o HTML
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
@@ -283,7 +312,7 @@ def cliente(id: str):
 
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
-    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else (f"/uploads/{id}/{arquivos}" if arquivos else "https://via.placeholder.com/800x400?text=Sem+Foto")
+    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else "https://via.placeholder.com/800x400?text=Sem+Foto"
     fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\');"></div>' for f in arquivos])
 
     return f"""
@@ -413,7 +442,7 @@ def cliente(id: str):
         <div class="assinatura-box">
             <div class="assinatura-linha"></div>
             <strong style="font-size: 14px;">Perito Automotivo</strong><br>
-            <span style="font-size: 10px;">Sistema de Avaliação de Originalidade</span>
+            <span style="font-size: 10px;">Sistema de Avaliação de Originalidade IA</span>
         </div>
         <div class="veredito-final-stamp">
             <div style="font-size: 10px; opacity: 0.8;">PONTUAÇÃO FINAL</div>
