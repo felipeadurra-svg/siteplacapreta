@@ -16,12 +16,11 @@ import re
 app = FastAPI()
 
 # 🔑 Configuração das APIs
-# Certifique-se de que estas variáveis de ambiente estão configuradas no seu servidor (Render/Vercel)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 sdk = mercadopago.SDK(os.getenv("MP_ACCESS_TOKEN"))
 MODEL = "gpt-4o"
 
-# 🌍 Configuração de CORS para permitir requisições do seu Frontend
+# 🌍 Configuração de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -68,20 +67,10 @@ Você está produzindo um LAUDO TÉCNICO PROFISSIONAL PARA CLIENTE FINAL.
 - Interior: Inicia com 30 pontos.
 - Mecânica: Inicia com 30 pontos.
 - Conservação: Inicia com 10 pontos. 
-- REGRA DO 10/10: Se NÃO houver defeitos na seção de CONSERVAÇÃO, o subtotal DEVE ser 10/10. É terminantemente proibido atribuir 0/10 para carros conservados.
-- REGRA DO ESTADO IMPECÁVEL: Se NÃO houver reduções ou defeitos descritos em uma seção, a nota final DEVE ser obrigatoriamente a máxima (ex: 10/10) 
+- REGRA DO 10/10: Se NÃO houver defeitos na seção de CONSERVAÇÃO, o subtotal DEVE ser 10/10.
+- REGRA DO ESTADO IMPECÁVEL: Se NÃO houver reduções ou defeitos, a nota DEVE ser a máxima.
 - Redução de 1 ponto: Itens desgastados ou peças de época não originais.
 - Redução de 2 ou mais pontos: Faltas graves (ex: motor de outra marca, rebaixamento).
-- Se houver redução, o cálculo do Subtotal deve ser exato (Total da seção - reduções).
-- Não invente pontuações aleatórias. Se subtraiu 1, de 30 vai para 29.
-
-Formato obrigatório para descontos:
-“Redução de X ponto(s) devido a [descrição objetiva]”
-
-- Todo desconto deve vir acompanhado de justificativa técnica objetiva na linha OBS.
-- Só desconte pontos 1 vez pelo mesmo motivo.
-- Mantenha o Subtotal no formato "Subtotal: XX/XX".
-- NÃO USE EMOJIS no corpo do texto, apenas o texto puro.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO:
 
@@ -99,7 +88,7 @@ FORMATO DE RESPOSTA OBRIGATÓRIO:
 -Rodas e pneus: [comentário]
 -Sinais de restauração: [comentário]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Se houver desconto, descreva aqui]
 
 2- INTERIOR  
 -Painel: [comentário]
@@ -108,7 +97,7 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 -Forração: [comentário]
 -Conservação geral: [comentário]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Se houver desconto, descreva aqui]
 
 3- MECÂNICA 
 -Organização do cofre: [comentário]
@@ -116,19 +105,19 @@ OBS: [Se houver desconto, descreva aqui, senão ignore]
 -Componentes originais visíveis: [comentário]
 -Suspensão e rodas: [comentário]
 Subtotal: XX/30
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Se houver desconto, descreva aqui]
 
 4- CONSERVAÇÃO 
 -Estrutura aparente: [comentário]
 -Borrachas: [comentário]
 -Desgaste natural: [comentário]
 Subtotal: XX/10
-OBS: [Se houver desconto, descreva aqui, senão ignore]
+OBS: [Se houver desconto, descreva aqui]
 
 TOTAL: XX / 100
 VEREDITO: [APROVADO ou REPROVADO] para placa preta
 
-💰 ANÁLISE DE MERCADO (BRASIL – VALORES REAIS EM R$)
+💰 ANÁLISE DE MERCADO (BRASIL)
 💸 Venda rápida: R$ XXXXX a R$ XXXXX
 💰 Mercado particular: R$ XXXXX a R$ XXXXX
 🏆 Pós placa preta: R$ XXXXX a R$ XXXXX
@@ -145,8 +134,7 @@ def gerar_relatorio(fotos):
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
             })
     
-    if not imgs:
-        return "Erro: Nenhuma imagem processável foi enviada."
+    if not imgs: return "Erro: Fotos não processadas."
 
     try:
         response = client.chat.completions.create(
@@ -163,42 +151,31 @@ def gerar_relatorio(fotos):
 @app.post("/create_preference")
 async def create_preference(request: Request):
     try:
-        # Dados da preferência
         preference_data = {
             "items": [
                 {
                     "title": "Laudo Técnico de Originalidade - MeuCarroAntigo",
                     "quantity": 1,
-                    "unit_price": 1.00,
+                    "unit_price": 1.00,  # ✅ Ponto decimal correto
                     "currency_id": "BRL"
                 }
             ],
-            "payment_methods": {
-                "excluded_payment_types": [
-                    # Se quiser excluir algo como Boleto, adicione aqui:
-                    # {"id": "ticket"} 
-                ],
-                "installments": 12 # Permite parcelar em até 12x no cartão
-            },
             "back_urls": {
                 "success": "https://meucarroantigo.com/avaliacao?status=success",
                 "failure": "https://meucarroantigo.com/avaliacao?status=failure",
                 "pending": "https://meucarroantigo.com/avaliacao?status=pending"
             },
             "auto_return": "approved",
-            # Expiração do link (opcional)
-            "expires": False
+            "notification_url": "https://siteplacapreta.onrender.com/webhook"
         }
-        
         preference_response = sdk.preference().create(preference_data)
-        
-        # Log para debug (opcional)
-        print(f"Preferência criada: {preference_response['response']['id']}")
-        
         return JSONResponse(content={"id": preference_response["response"]["id"]})
     except Exception as e:
-        print(f"Erro ao criar preferência: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=400)
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    return {"status": "ok"}
 
 @app.post("/avaliacao")
 async def avaliacao(
@@ -209,7 +186,6 @@ async def avaliacao(
     foto_interior: Optional[UploadFile] = File(None), foto_painel: Optional[UploadFile] = File(None),
     foto_motor: Optional[UploadFile] = File(None), foto_chassi: Optional[UploadFile] = File(None),
 ):
-    """Recebe fotos e dados, processa via IA e salva o resultado."""
     cliente_id = f"{nome}_{uuid.uuid4().hex[:6]}".replace(" ", "_")
     pasta = os.path.join(UPLOAD_DIR, cliente_id)
     os.makedirs(pasta, exist_ok=True)
@@ -225,7 +201,6 @@ async def avaliacao(
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
     }
     
-    # Chama a IA para analisar as fotos salvas
     relatorio = gerar_relatorio(fotos_map)
     
     dados = {
@@ -242,7 +217,6 @@ async def avaliacao(
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def listar_avaliacoes():
-    """Dashboard simples para ver todos os laudos gerados."""
     clientes = []
     if os.path.exists(UPLOAD_DIR):
         for pasta in os.listdir(UPLOAD_DIR):
@@ -250,28 +224,14 @@ def listar_avaliacoes():
             if os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     clientes.append((pasta, json.load(f)))
-    
-    clientes.reverse() # Mais recentes primeiro
-    
-    html = """<html><head><meta charset="UTF-8"><style>
-        body { font-family: 'Montserrat', sans-serif; background: #f2f2f2; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 4px solid #0b3b2e; }
-        .btn { display: inline-block; margin-top: 10px; padding: 10px; background: #0b3b2e; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; }
-    </style></head><body><h1>🚗 Dashboard de Avaliações</h1><div class="grid">"""
-    
+    clientes.reverse()
+    html = "<html><body><h1>Dashboard</h1>"
     for id_, d in clientes:
-        v = d.get("veiculo", {})
-        html += f"""<div class="card"><b>{d.get('nome')}</b><br>
-        🚗 {v.get('marca')} {v.get('modelo')} ({v.get('ano')})<br>📅 {d.get('data')}<br>
-        <a class="btn" href="/cliente/{id_}">Abrir Laudo Técnico</a></div>"""
-    
-    html += "</div></body></html>"
-    return HTMLResponse(html)
+        html += f"<p>{d.get('nome')} - <a href='/cliente/{id_}'>Abrir Laudo</a></p>"
+    return HTMLResponse(html + "</body></html>")
 
 @app.get("/cliente/{id}", response_class=HTMLResponse)
 def ver_laudo_cliente(id: str):
-    """Gera a página visual do laudo técnico certificado."""
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
     if not os.path.exists(path): return HTMLResponse("Erro: Laudo não encontrado.")
     
@@ -280,28 +240,22 @@ def ver_laudo_cliente(id: str):
     
     texto = d.get("relatorio_ai", "")
 
-    # Função interna para extrair dados do texto da IA via Regex
     def extrair_secao_v2(prefixo, proximo, original):
         try:
             padrao = rf"{re.escape(prefixo)}(.*?)(?={re.escape(proximo)}|$)"
             match = re.search(padrao, original, re.DOTALL | re.IGNORECASE)
             if match:
                 bloco_total = match.group(1).strip()
-                # Busca subtotal
                 sub_match = re.search(r"(?:Subtotal:|Sub:)\s*([\d\-]+\s*/\s*[\d\-]+)", bloco_total, re.IGNORECASE)
                 sub_val = sub_match.group(1).replace(" ", "") if sub_match else "0/0"
-                # Busca OBS
                 obs_match = re.search(r"OBS:\s*(.*?)(?=Subtotal:|Sub:|$)", bloco_total, re.DOTALL | re.IGNORECASE)
                 obs_val = obs_match.group(1).strip() if obs_match and obs_match.group(1).strip() else "Sem observações específicas."
-                # Limpa o texto principal
                 res_limpo = re.sub(r"OBS:.*", "", bloco_total, flags=re.DOTALL | re.IGNORECASE)
                 res_limpo = re.sub(r"(?:Subtotal|Sub):.*", "", res_limpo, flags=re.IGNORECASE)
                 return res_limpo.strip(), sub_val, obs_val
             return "Dados não localizados.", "0/0", "N/A"
-        except:
-            return "Erro no processamento.", "0/0", "Erro"
+        except: return "Erro.", "0/0", "Erro"
 
-    # Processamento das seções para o HTML
     sec_ext, sub_ext, obs_ext = extrair_secao_v2("1- EXTERIOR", "2- INTERIOR", texto)
     sec_int, sub_int, obs_int = extrair_secao_v2("2- INTERIOR", "3- MECÂNICA", texto)
     sec_mec, sub_mec, obs_mec = extrair_secao_v2("3- MECÂNICA", "4- CONSERVAÇÃO", texto)
@@ -320,7 +274,7 @@ def ver_laudo_cliente(id: str):
 
     fotos_dir = os.path.join(UPLOAD_DIR, id)
     arquivos = sorted([f for f in os.listdir(fotos_dir) if f.endswith(".jpg")])
-    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else "https://via.placeholder.com/800x400?text=Sem+Foto"
+    foto_capa = f"/uploads/{id}/frente.jpg" if "frente.jpg" in arquivos else ""
     fotos_grid_html = "".join([f'<div class="mini-foto" style="background-image:url(\'/uploads/{id}/{f}\');"></div>' for f in arquivos])
 
     return f"""
@@ -332,130 +286,50 @@ def ver_laudo_cliente(id: str):
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {{ --verde-escuro: #062b21; --verde-medio: #0b3b2e; --verde-claro: #1f6b4a; --bege-fundo: #e3e8e1; --bege-card: #f1f4ef; --dourado: #c8a96a; }}
-        * {{ box-sizing: border-box; }}
         body {{ background-color: #222; font-family: 'Montserrat', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }}
-        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
+        .laudo-folha {{ width: 1000px; background-color: var(--bege-fundo); padding: 30px; border-radius: 5px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }}
         .header {{ background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 20px; border-radius: 10px; text-align: center; border-bottom: 4px solid var(--dourado); margin-bottom: 20px; }}
-        .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 42px; letter-spacing: 2px; }}
-        .header p {{ margin: 5px 0 0; font-size: 16px; letter-spacing: 4px; font-weight: 300; }}
+        .header h1 {{ font-family: 'Cinzel', serif; margin: 0; font-size: 42px; }}
         .topo-container {{ display: grid; grid-template-columns: 400px 1fr; gap: 20px; margin-bottom: 20px; }}
-        .dados-proprietario {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 12px; padding: 15px; }}
-        .info-row {{ display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #d0d5cd; }}
-        .info-row:last-child {{ border: none; }}
-        .info-row .icon {{ font-size: 24px; width: 30px; text-align: center; }}
-        .info-text label {{ display: block; font-size: 11px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; }}
-        .info-text span {{ font-size: 15px; font-weight: 600; color: #333; }}
-        .foto-principal {{ border: 5px solid #fff; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow: hidden; height: 250px; }}
+        .dados-proprietario {{ background: var(--bege-card); border-radius: 12px; padding: 15px; border: 1px solid #c0c5bd; }}
+        .info-row {{ display: flex; align-items: center; gap: 15px; padding: 8px 0; border-bottom: 1px solid #d0d5cd; }}
+        .foto-principal {{ border: 5px solid #fff; border-radius: 15px; overflow: hidden; height: 250px; }}
         .foto-principal img {{ width: 100%; height: 100%; object-fit: cover; }}
-        .barra-titulo {{ background: var(--verde-escuro); color: white; padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }}
-        .conteudo-grid {{ display: grid; grid-template-columns: 1fr 350px; gap: 20px; }}
-        .card-avaliacao {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; overflow: hidden; }}
-        .card-header {{ background: linear-gradient(90deg, var(--verde-escuro), var(--verde-claro)); color: white; padding: 8px 15px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
-        .card-body {{ display: grid; grid-template-columns: 1fr 180px; padding: 12px; gap: 15px; }}
-        .itens-lista {{ font-size: 11px; line-height: 1.5; color: #444; white-space: pre-wrap; }}
-        .obs-tecnica {{ font-size: 10px; background: #fff; padding: 8px; border-radius: 5px; border-left: 3px solid var(--verde-claro); overflow: hidden; }}
-        .subtotal-box {{ grid-column: span 2; background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; font-size: 18px; border-radius: 5px; }}
-        .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; margin-bottom: 15px; padding: 15px; }}
-        .sidebar-titulo {{ border-bottom: 2px solid var(--verde-claro); color: var(--verde-escuro); font-weight: 700; font-size: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }}
-        .resultado-final-box {{ text-align: center; padding: 10px; }}
-        .score-grande {{ font-size: 48px; font-weight: 800; color: var(--verde-escuro); }}
-        .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; border-radius: 8px; font-weight: 700; margin-top: 10px; }}
-        .analise-mercado p {{ font-size: 12px; margin: 8px 0; display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; }}
-        .foto-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }}
-        .mini-foto {{ aspect-ratio: 1; background-color: #ddd; border-radius: 4px; border: 1px solid #bbb; background-position: center; background-size: cover; }}
-        .footer {{ margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }}
-        .assinatura-box {{ text-align: center; width: 300px; }}
-        .assinatura-linha {{ border-top: 2px solid #333; margin-bottom: 5px; }}
-        .veredito-final-stamp {{ background: var(--verde-escuro); color: white; padding: 15px 30px; border-radius: 10px; text-align: center; }}
+        .card-avaliacao {{ background: var(--bege-card); border-radius: 10px; margin-bottom: 15px; border: 1px solid #c0c5bd; overflow: hidden; }}
+        .card-header {{ background: var(--verde-escuro); color: white; padding: 8px 15px; display: flex; justify-content: space-between; }}
+        .card-body {{ display: grid; grid-template-columns: 1fr 200px; padding: 12px; gap: 15px; }}
+        .obs-tecnica {{ font-size: 10px; background: #fff; padding: 8px; border-radius: 5px; border-left: 3px solid var(--verde-claro); }}
+        .subtotal-box {{ grid-column: span 2; background: var(--verde-escuro); color: white; text-align: right; padding: 5px 15px; font-weight: bold; }}
+        .sidebar-card {{ background: var(--bege-card); border: 1px solid #c0c5bd; border-radius: 10px; padding: 15px; margin-bottom: 15px; }}
+        .score-grande {{ font-size: 48px; font-weight: 800; color: var(--verde-escuro); text-align: center; }}
+        .veredito-tag {{ background: var(--verde-escuro); color: white; padding: 10px; text-align: center; border-radius: 8px; }}
+        .mini-foto {{ aspect-ratio: 1; background-size: cover; background-position: center; border-radius: 4px; }}
+        .foto-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }}
     </style>
 </head>
 <body>
 <div class="laudo-folha">
-    <div class="header">
-        <h1>LAUDO TÉCNICO PERICIAL</h1>
-        <p>ORIGINALIDADE E ANTIGOMOBILISMO</p>
-    </div>
+    <div class="header"><h1>LAUDO TÉCNICO PERICIAL</h1><p>ORIGINALIDADE E ANTIGOMOBILISMO</p></div>
     <div class="topo-container">
         <div class="dados-proprietario">
-            <div class="info-row"><div class="icon">👤</div><div class="info-text"><label>Proprietário:</label><span>{d['nome']}</span></div></div>
-            <div class="info-row"><div class="icon">🚗</div><div class="info-text"><label>Veículo:</label><span>{d['veiculo']['marca']} {d['veiculo']['modelo']} - {d['veiculo']['ano']}</span></div></div>
-            <div class="info-row"><div class="icon">📅</div><div class="info-text"><label>Data:</label><span>{d['data']}</span></div></div>
-            <div class="info-row"><div class="icon">🆔</div><div class="info-text"><label>Código:</label><span>{id}</span></div></div>
+            <div class="info-row"><b>Proprietário:</b> {d['nome']}</div>
+            <div class="info-row"><b>Veículo:</b> {d['veiculo']['marca']} {d['veiculo']['modelo']}</div>
+            <div class="info-row"><b>Ano:</b> {d['veiculo']['ano']}</div>
+            <div class="info-row"><b>Data:</b> {d['data']}</div>
         </div>
-        <div class="foto-principal"><img src="{foto_capa}" alt="Veículo"></div>
+        <div class="foto-principal"><img src="{foto_capa}"></div>
     </div>
-    <div class="barra-titulo">
-        <span style="font-size: 24px;">📄</span>
-        <div><strong>RELATÓRIO DE VISTORIA</strong><br><span style="font-size: 10px; opacity: 0.8;">TÉCNICA DE ORIGINALIDADE AUTOMOTIVA</span></div>
-    </div>
-    <div class="conteudo-grid">
-        <div class="col-esquerda">
-            <div class="card-avaliacao">
-                <div class="card-header"><span>I. EXTERIOR E CARROCERIA (0-30 pts)</span></div>
-                <div class="card-body">
-                    <div class="itens-lista">{sec_ext}</div>
-                    <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_ext}</div>
-                    <div class="subtotal-box">Subtotal: {sub_ext}</div>
-                </div>
-            </div>
-            <div class="card-avaliacao">
-                <div class="card-header"><span>II. INTERIOR E TAPEÇARIA (0-30 pts)</span></div>
-                <div class="card-body">
-                    <div class="itens-lista">{sec_int}</div>
-                    <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_int}</div>
-                    <div class="subtotal-box">Subtotal: {sub_int}</div>
-                </div>
-            </div>
-            <div class="card-avaliacao">
-                <div class="card-header"><span>III. MECÂNICA VISUAL / COFRE (0-30 pts)</span></div>
-                <div class="card-body">
-                    <div class="itens-lista">{sec_mec}</div>
-                    <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_mec}</div>
-                    <div class="subtotal-box">Subtotal: {sub_mec}</div>
-                </div>
-            </div>
-            <div class="card-avaliacao">
-                <div class="card-header"><span>IV. CONSERVAÇÃO GERAL (0-10 pts)</span></div>
-                <div class="card-body">
-                    <div class="itens-lista">{sec_cons}</div>
-                    <div class="obs-tecnica"><strong>Observações:</strong><br>{obs_cons}</div>
-                    <div class="subtotal-box">Subtotal: {sub_cons}</div>
-                </div>
-            </div>
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 20px;">
+        <div>
+            <div class="card-avaliacao"><div class="card-header">I. EXTERIOR</div><div class="card-body"><div>{sec_ext}</div><div class="obs-tecnica">{obs_ext}</div><div class="subtotal-box">Subtotal: {sub_ext}</div></div></div>
+            <div class="card-avaliacao"><div class="card-header">II. INTERIOR</div><div class="card-body"><div>{sec_int}</div><div class="obs-tecnica">{obs_int}</div><div class="subtotal-box">Subtotal: {sub_int}</div></div></div>
+            <div class="card-avaliacao"><div class="card-header">III. MECÂNICA</div><div class="card-body"><div>{sec_mec}</div><div class="obs-tecnica">{obs_mec}</div><div class="subtotal-box">Subtotal: {sub_mec}</div></div></div>
+            <div class="card-avaliacao"><div class="card-header">IV. CONSERVAÇÃO</div><div class="card-body"><div>{sec_cons}</div><div class="obs-tecnica">{obs_cons}</div><div class="subtotal-box">Subtotal: {sub_cons}</div></div></div>
         </div>
-        <div class="col-direita">
-            <div class="sidebar-card">
-                <div class="sidebar-titulo">📊 RESULTADO FINAL</div>
-                <div class="resultado-final-box">
-                    <label style="font-size: 12px;">TOTAL:</label>
-                    <div class="score-grande">{score} / 100</div>
-                    <div class="veredito-tag">{veredito}<br><span style="font-size: 11px; font-weight: 300;">para placa preta</span></div>
-                </div>
-            </div>
-            <div class="sidebar-card">
-                <div class="sidebar-titulo">💰 ANÁLISE DE MERCADO (R$)</div>
-                <div class="analise-mercado">
-                    <p>Venda rápida: <span>{v_rapida}</span></p>
-                    <p>Particular: <span>{v_part}</span></p>
-                    <p>Pós placa preta: <span>{v_pos}</span></p>
-                </div>
-            </div>
-            <div class="sidebar-card">
-                <div class="sidebar-titulo">📸 FOTOS DO VEÍCULO ({len(arquivos)})</div>
-                <div class="foto-grid">{fotos_grid_html}</div>
-            </div>
-        </div>
-    </div>
-    <div class="footer">
-        <div class="assinatura-box">
-            <div class="assinatura-linha"></div>
-            <strong style="font-size: 14px;">Perito Automotivo</strong><br>
-            <span style="font-size: 10px;">Sistema de Avaliação de Originalidade IA</span>
-        </div>
-        <div class="veredito-final-stamp">
-            <div style="font-size: 10px; opacity: 0.8;">PONTUAÇÃO FINAL</div>
-            <div style="font-size: 24px; font-weight: 800;">{score}</div>
-            <div style="font-size: 9px;">DE 100 PONTOS</div>
+        <div>
+            <div class="sidebar-card"><div class="score-grande">{score}/100</div><div class="veredito-tag">{veredito}</div></div>
+            <div class="sidebar-card"><b>Mercado:</b><br>Rápida: {v_rapida}<br>Particular: {v_part}<br>Placa Preta: {v_pos}</div>
+            <div class="sidebar-card"><b>Fotos:</b><div class="foto-grid">{fotos_grid_html}</div></div>
         </div>
     </div>
 </div>
