@@ -162,14 +162,8 @@ def gerar_relatorio(fotos):
 
 @app.post("/create_preference")
 async def create_preference(request: Request):
-    """Gera o link de pagamento do Mercado Pago."""
     try:
-        # Tenta ler o corpo se existir, mas não trava se o frontend enviar vazio
-        try:
-            body = await request.json()
-        except:
-            body = {}
-
+        # Dados da preferência
         preference_data = {
             "items": [
                 {
@@ -179,17 +173,31 @@ async def create_preference(request: Request):
                     "currency_id": "BRL"
                 }
             ],
+            "payment_methods": {
+                "excluded_payment_types": [
+                    # Se quiser excluir algo como Boleto, adicione aqui:
+                    # {"id": "ticket"} 
+                ],
+                "installments": 12 # Permite parcelar em até 12x no cartão
+            },
             "back_urls": {
                 "success": "https://meucarroantigo.com/avaliacao?status=success",
                 "failure": "https://meucarroantigo.com/avaliacao?status=failure",
                 "pending": "https://meucarroantigo.com/avaliacao?status=pending"
             },
             "auto_return": "approved",
+            # Expiração do link (opcional)
+            "expires": False
         }
         
         preference_response = sdk.preference().create(preference_data)
+        
+        # Log para debug (opcional)
+        print(f"Preferência criada: {preference_response['response']['id']}")
+        
         return JSONResponse(content={"id": preference_response["response"]["id"]})
     except Exception as e:
+        print(f"Erro ao criar preferência: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
 @app.post("/avaliacao")
