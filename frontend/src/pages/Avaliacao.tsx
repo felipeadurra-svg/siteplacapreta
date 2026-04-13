@@ -25,6 +25,10 @@ const Avaliacao = () => {
   const [errorLoadingPayment, setErrorLoadingPayment] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // --- CONSTANTES DE NAVEGAÇÃO ---
+  const steps = ["Dados", "Fotos", "Pagamento", "Concluído"];
+  const stepIndex: Record<Step, number> = { form: 0, photos: 1, payment: 2, success: 3 };
+
   // Carrega o SDK do Mercado Pago
   useEffect(() => {
     if (document.getElementById("mp-sdk")) return;
@@ -134,7 +138,8 @@ const Avaliacao = () => {
       <Header />
       <main className="pt-16">
         <div className="container py-12 px-4 max-w-4xl mx-auto">
-          {/* STEPPER */}
+          
+          {/* STEPPER - CORRIGIDO: Agora 'steps' está definido */}
           <div className="flex items-center justify-center gap-4 mb-12">
             {steps.map((label, i) => (
               <div key={label} className="flex items-center gap-2">
@@ -161,13 +166,13 @@ const Avaliacao = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">PAGAMENTO</h2>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tight underline decoration-yellow-500">PAGAMENTO</h2>
                   <p className="text-slate-500 text-sm">Gere seu laudo técnico certificado.</p>
                 </div>
                 
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left space-y-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Serviço:</span>
+                    <span className="text-slate-500 font-medium">Serviço:</span>
                     <span className="font-bold text-slate-900">Relatório Pericial IA</span>
                   </div>
                   <div className="flex justify-between items-center border-t border-slate-200 pt-3">
@@ -185,7 +190,7 @@ const Avaliacao = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full text-red-600 border-red-200 hover:bg-red-100"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-100 font-bold"
                       onClick={fetchPreference}
                     >
                       <RefreshCw className={`h-3 w-3 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
@@ -215,7 +220,7 @@ const Avaliacao = () => {
                     )}
                   </Button>
                   
-                  <Button variant="ghost" onClick={() => setCurrentStep("photos")} disabled={isProcessing} className="text-slate-400">
+                  <Button variant="ghost" onClick={() => setCurrentStep("photos")} disabled={isProcessing} className="text-slate-400 font-bold">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
                   </Button>
                 </div>
@@ -233,7 +238,7 @@ const Avaliacao = () => {
               <div className="bg-emerald-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl border-4 border-white">
                 <CheckCircle className="h-12 w-12 text-white" />
               </div>
-              <h2 className="text-4xl font-black mb-4 text-slate-900 tracking-tight">SUCESSO!</h2>
+              <h2 className="text-4xl font-black mb-4 text-slate-900 tracking-tight uppercase">SUCESSO!</h2>
               <p className="text-slate-600 mb-10 leading-relaxed text-lg">
                 O pagamento foi processado e seu laudo está pronto para visualização.
               </p>
@@ -248,7 +253,7 @@ const Avaliacao = () => {
                 </Button>
                 
                 <Link to="/" className="block">
-                  <Button variant="ghost" className="w-full h-12 text-slate-400 font-bold">
+                  <Button variant="ghost" className="w-full h-12 text-slate-400 font-bold uppercase tracking-tighter">
                     VOLTAR AO INÍCIO
                   </Button>
                 </Link>
