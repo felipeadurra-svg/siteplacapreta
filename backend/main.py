@@ -181,29 +181,48 @@ async def create_preference(request: Request):
 async def webhook(request: Request):
     try:
         data = await request.json()
+        print(f"--- WEBHOOK RECEBIDO: {data} ---") # Log para debug no Render
+
+        # O Mercado Pago pode enviar o ID de formas diferentes dependendo da versão
+        payment_id = None
         if data.get("type") == "payment":
             payment_id = data.get("data", {}).get("id")
-            payment_info = sdk.payment().get(payment_id)
+        elif data.get("action", "").startswith("payment"):
+            payment_id = data.get("data", {}).get("id") or data.get("id")
+
+        if payment_id:
+            print(f"Consultando pagamento: {payment_id}")
+            payment_info = sdk.payment().get(str(payment_id))
             
             if payment_info["response"]["status"] == "approved":
-                cliente_id = payment_info["response"]["external_reference"]
-                pasta = os.path.join(UPLOAD_DIR, cliente_id)
-                json_path = os.path.join(pasta, "dados.json")
-                
-                if os.path.exists(json_path):
-                    with open(json_path, "r", encoding="utf-8") as f:
-                        dados = json.load(f)
+                cliente_id = payment_info["response"].get("external_reference")
+                print(f"Pagamento aprovado para o cliente: {cliente_id}")
+
+                if cliente_id:
+                    pasta = os.path.join(UPLOAD_DIR, cliente_id)
+                    json_path = os.path.join(pasta, "dados.json")
                     
-                    # SÓ GERA O RELATÓRIO SE AINDA NÃO FOI PAGO
-                    if not dados.get("pago"):
-                        relatorio = gerar_relatorio(dados["fotos_map"])
-                        dados["relatorio_ai"] = relatorio
-                        dados["pago"] = True
+                    if os.path.exists(json_path):
+                        with open(json_path, "r", encoding="utf-8") as f:
+                            dados = json.load(f)
                         
-                        with open(json_path, "w", encoding="utf-8") as f:
-                            json.dump(dados, f, ensure_ascii=False, indent=4)
-    except:
-        pass
+                        if not dados.get("pago"):
+                            print(f"Iniciando geração do laudo IA para {cliente_id}...")
+                            relatorio = gerar_relatorio(dados["fotos_map"])
+                            dados["relatorio_ai"] = relatorio
+                            dados["pago"] = True
+                            
+                            with open(json_path, "w", encoding="utf-8") as f:
+                                json.dump(dados, f, ensure_ascii=False, indent=4)
+                            print("Laudo gerado e salvo com sucesso!")
+                    else:
+                        print(f"ERRO: Pasta {pasta} não encontrada no servidor.")
+        else:
+            print("Webhook recebido, mas sem ID de pagamento válido.")
+
+    except Exception as e:
+        print(f"ERRO CRÍTICO NO WEBHOOK: {str(e)}")
+    
     return {"status": "ok"}
 
 @app.post("/avaliacao")
