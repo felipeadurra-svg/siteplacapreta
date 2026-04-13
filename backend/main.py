@@ -169,7 +169,7 @@ async def create_preference(request: Request):
                 {
                     "title": "Laudo Técnico de Originalidade - MeuCarroAntigo",
                     "quantity": 1,
-                    "unit_price": 1,00
+                    "unit_price": 1.00
                     "currency_id": "BRL"
                 }
             ],
