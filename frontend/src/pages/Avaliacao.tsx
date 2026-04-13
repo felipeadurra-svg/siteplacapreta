@@ -6,7 +6,6 @@ import PhotoUpload, { type PhotoData } from "@/components/PhotoUpload";
 import { CheckCircle, CreditCard, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Step = "form" | "photos" | "payment" | "success";
 
@@ -70,14 +69,13 @@ const Avaliacao = () => {
 
   const handlePayment = async () => {
     if (!window.MercadoPago) {
-      alert("O sistema de pagamento está carregando. Tente novamente em instantes.");
+      alert("Sistema carregando...");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. Chama seu novo Payment.py através da rota do backend
       const prefRes = await fetch("https://siteplacapreta.onrender.com/create_preference", {
         method: "POST",
         headers: { "Content-Type": "application/json" }
@@ -85,7 +83,6 @@ const Avaliacao = () => {
       
       const { id: preferenceId } = await prefRes.json();
 
-      // 2. Inicializa o checkout com sua chave pública
       const mp = new window.MercadoPago('APP_USR-9c54b89f-6fec-46ec-bde6-e975a8f1d962', {
         locale: 'pt-BR'
       });
@@ -95,13 +92,11 @@ const Avaliacao = () => {
         autoOpen: true,
       });
 
-      // 3. Processa a geração do laudo enquanto o usuário paga
       const respostaLaudo = await enviarParaBackend();
       if (respostaLaudo?.id) {
         setLaudoId(respostaLaudo.id);
       }
 
-      // Simula tempo de finalização
       setTimeout(() => {
         setIsProcessing(false);
         setCurrentStep("success");
@@ -110,7 +105,7 @@ const Avaliacao = () => {
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      alert("Houve um problema ao iniciar o pagamento.");
+      alert("Erro ao iniciar pagamento.");
     }
   };
 
@@ -123,7 +118,7 @@ const Avaliacao = () => {
           <div className="flex items-center justify-center gap-4 mb-12">
             {steps.map((label, i) => (
               <div key={label} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                   stepIndex[currentStep] >= i ? "bg-yellow-500 text-black" : "bg-muted text-muted-foreground"
                 }`}>
                   {i + 1}
@@ -135,72 +130,62 @@ const Avaliacao = () => {
             ))}
           </div>
 
-          {/* FORMULÁRIO */}
           {currentStep === "form" && <VehicleForm onSubmit={handleFormSubmit} />}
+          {currentStep === "photos" && <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />}
           
-          {/* UPLOAD DE FOTOS */}
-          {currentStep === "photos" && (
-            <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />
-          )}
-          
-          {/* TELA DE PAGAMENTO INTEGRADA */}
+          {/* TELA DE PAGAMENTO USANDO DIVS NORMAIS (EVITA ERRO DE BUILD NO VERCEL) */}
           {currentStep === "payment" && (
-            <div className="max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Finalizar Avaliação
-                  </CardTitle>
-                  <CardDescription>
-                    Pague com segurança via Mercado Pago para gerar seu laudo técnico.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Serviço:</span>
-                      <span className="font-medium">Laudo Técnico Placa Preta</span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
-                      <span>Total:</span>
-                      <span className="text-green-600">R$ 100,00</span>
-                    </div>
+            <div className="max-w-md mx-auto p-6 bg-white rounded-xl shadow-lg border border-gray-200 animate-in fade-in slide-in-from-bottom-4">
+              <div className="text-center space-y-4">
+                <CreditCard className="h-10 w-10 mx-auto text-yellow-500" />
+                <h2 className="text-2xl font-bold">Finalizar Avaliação</h2>
+                <p className="text-gray-500 text-sm">Pagamento seguro via Mercado Pago.</p>
+                
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-left">
+                  <div className="flex justify-between text-sm">
+                    <span>Serviço:</span>
+                    <span className="font-medium text-right">Laudo Placa Preta</span>
                   </div>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total:</span>
+                    <span className="text-green-600">R$ 100,00</span>
+                  </div>
+                </div>
 
-                  <div className="flex flex-col gap-3">
-                    <Button 
-                      className="w-full h-12 text-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
-                      onClick={handlePayment}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Processando...
-                        </>
-                      ) : (
-                        "Pagar com Mercado Pago"
-                      )}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentStep("photos")}
-                      disabled={isProcessing}
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Voltar para Fotos
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="flex flex-col gap-3 pt-4">
+                  <Button 
+                    className="w-full h-12 text-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                    onClick={handlePayment}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 className="animate-spin" /> : "Pagar Agora"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setCurrentStep("photos")} disabled={isProcessing}>
+                    Voltar
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
           
-          {/* SUCESSO */}
           {currentStep === "success" && (
-            <div className="text-center animate-in zoom-in duration-500 max-w-md mx-auto">
-              <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-12 w-12 text-green-600" />
-              </div>
-              <h2 className="text
+            <div className="text-center max-w-md mx-auto">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold mb-2">Concluído!</h2>
+              <p className="text-muted-foreground mb-6">Seu laudo foi gerado com sucesso.</p>
+              <Button 
+                className="w-full bg-green-700 hover:bg-green-800 text-white h-12"
+                onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
+              >
+                Ver Laudo Técnico
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default Avaliacao;
