@@ -161,7 +161,7 @@ const Avaliacao = () => {
                 <div className="p-8 space-y-8">
                   <div className="flex justify-between items-end">
                     <span className="text-slate-500 text-sm font-bold uppercase tracking-widest">Valor Total</span>
-                    <span className="text-4xl font-black text-white leading-none">R$ 99,90</span>
+                    <span className="text-4xl font-black text-white leading-none">R$ 97,00</span>
                   </div>
 
                   <div className="space-y-4">
