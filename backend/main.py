@@ -151,19 +151,23 @@ def gerar_relatorio(fotos):
 @app.post("/create_preference")
 async def create_preference(request: Request):
     try:
+        body = await request.json()
+        external_reference = body.get("external_reference")
+        
         preference_data = {
             "items": [
                 {
                     "title": "Laudo Técnico de Originalidade - MeuCarroAntigo",
                     "quantity": 1,
-                    "unit_price": 1.00,  # ✅ Ponto decimal correto
+                    "unit_price": 1.00,
                     "currency_id": "BRL"
                 }
             ],
+            "external_reference": external_reference, # VINCULA O PAGAMENTO AO ID DO CLIENTE
             "back_urls": {
-                "success": "https://meucarroantigo.com/avaliacao?status=success",
-                "failure": "https://meucarroantigo.com/avaliacao?status=failure",
-                "pending": "https://meucarroantigo.com/avaliacao?status=pending"
+                "success": "https://meucarroantigo.com/avaliacao",
+                "failure": "https://meucarroantigo.com/avaliacao",
+                "pending": "https://meucarroantigo.com/avaliacao"
             },
             "auto_return": "approved",
             "notification_url": "https://siteplacapreta.onrender.com/webhook"
@@ -175,6 +179,31 @@ async def create_preference(request: Request):
 
 @app.post("/webhook")
 async def webhook(request: Request):
+    try:
+        data = await request.json()
+        if data.get("type") == "payment":
+            payment_id = data.get("data", {}).get("id")
+            payment_info = sdk.payment().get(payment_id)
+            
+            if payment_info["response"]["status"] == "approved":
+                cliente_id = payment_info["response"]["external_reference"]
+                pasta = os.path.join(UPLOAD_DIR, cliente_id)
+                json_path = os.path.join(pasta, "dados.json")
+                
+                if os.path.exists(json_path):
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        dados = json.load(f)
+                    
+                    # SÓ GERA O RELATÓRIO SE AINDA NÃO FOI PAGO
+                    if not dados.get("pago"):
+                        relatorio = gerar_relatorio(dados["fotos_map"])
+                        dados["relatorio_ai"] = relatorio
+                        dados["pago"] = True
+                        
+                        with open(json_path, "w", encoding="utf-8") as f:
+                            json.dump(dados, f, ensure_ascii=False, indent=4)
+    except:
+        pass
     return {"status": "ok"}
 
 @app.post("/avaliacao")
@@ -201,13 +230,14 @@ async def avaliacao(
         "chassi": salvar_imagem(foto_chassi, f"{pasta}/chassi.jpg"),
     }
     
-    relatorio = gerar_relatorio(fotos_map)
-    
+    # SALVA TUDO, MAS NÃO CHAMA A IA AINDA
     dados = {
         "nome": nome, 
         "veiculo": {"marca": marca, "modelo": modelo, "ano": ano},
         "data": datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
-        "relatorio_ai": relatorio
+        "relatorio_ai": "Aguardando confirmação do pagamento...",
+        "fotos_map": fotos_map,
+        "pago": False
     }
     
     with open(f"{pasta}/dados.json", "w", encoding="utf-8") as f:
@@ -217,13 +247,13 @@ async def avaliacao(
 
 @app.get("/check_status/{id}")
 async def check_status(id: str):
-    """
-    Rota para o Frontend verificar se o laudo já foi processado e salvo.
-    """
     path = os.path.join(UPLOAD_DIR, id, "dados.json")
     if os.path.exists(path):
-        return JSONResponse(content={"status": "ready", "id": id})
-    return JSONResponse(content={"status": "pending"}, status_code=404)
+        with open(path, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+        if dados.get("pago") == True:
+            return {"status": "ready"}
+    return {"status": "pending"}
 
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def listar_avaliacoes():
@@ -237,7 +267,8 @@ def listar_avaliacoes():
     clientes.reverse()
     html = "<html><body><h1>Dashboard</h1>"
     for id_, d in clientes:
-        html += f"<p>{d.get('nome')} - <a href='/cliente/{id_}'>Abrir Laudo</a></p>"
+        status = "PAGO" if d.get("pago") else "PENDENTE"
+        html += f"<p>[{status}] {d.get('nome')} - <a href='/cliente/{id_}'>Abrir Laudo</a></p>"
     return HTMLResponse(html + "</body></html>")
 
 @app.get("/cliente/{id}", response_class=HTMLResponse)

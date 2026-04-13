@@ -31,7 +31,7 @@ const Avaliacao = () => {
 
   const stepIndex: Record<Step, number> = { form: 0, photos: 1, payment: 2, success: 3 };
 
-  // Carrega SDK do Mercado Pago
+  // 1. CARREGA O SDK DO MERCADO PAGO
   useEffect(() => {
     if (document.getElementById("mp-sdk")) return;
     const script = document.createElement("script");
@@ -41,34 +41,33 @@ const Avaliacao = () => {
     document.body.appendChild(script);
   }, []);
 
-  // 1. MONITORAMENTO (POLLING) - O "Vigia" que tira o usuário da tela de pagamento
+  // 2. VIGIA O STATUS DO PAGAMENTO (SÓ MUDA DE TELA QUANDO O BACKEND DER OK)
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
     if (currentStep === "payment" && laudoId) {
       interval = setInterval(async () => {
         try {
-          // Consulta a nova rota que criamos no Backend
           const response = await fetch(`https://siteplacapreta.onrender.com/check_status/${laudoId}`);
           if (response.ok) {
             const data = await response.json();
+            // O Backend só retorna "ready" quando o pagamento for confirmado
             if (data.status === "ready") {
-              console.log("Pagamento confirmado / Laudo detectado!");
               setCurrentStep("success");
               clearInterval(interval);
             }
           }
         } catch (err) {
-          // Silencioso: continua tentando até o arquivo existir
+          console.log("Aguardando confirmação...");
         }
-      }, 3000); // Checa a cada 3 segundos
+      }, 4000); // Verifica a cada 4 segundos
     }
 
     return () => clearInterval(interval);
   }, [currentStep, laudoId]);
 
-  // Função para preparar os dados e gerar a preferência
-  const prepareAvaliacao = async (currentPhotos: PhotoData) => {
+  // 3. ENVIA FOTOS E GERA O LINK DE PAGAMENTO (SEM GERAR O RELATÓRIO AINDA)
+  const handleUploadAndGoToPayment = async (currentPhotos: PhotoData) => {
     setIsProcessing(true);
     try {
       const submissionData = new FormData();
@@ -91,7 +90,7 @@ const Avaliacao = () => {
         }
       });
 
-      // 1. Envia fotos e gera laudo via IA
+      // Envia para o servidor salvar as fotos
       const resAvaliacao = await fetch("https://siteplacapreta.onrender.com/avaliacao", {
         method: "POST",
         body: submissionData
@@ -101,73 +100,76 @@ const Avaliacao = () => {
       if (dataAvaliacao.ok) {
         setLaudoId(dataAvaliacao.id);
         
-        // 2. Gera a preferência de pagamento vinculada a este laudo
+        // Gera a Preferência do Mercado Pago
         const resPref = await fetch("https://siteplacapreta.onrender.com/create_preference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ external_reference: dataAvaliacao.id })
         });
         const dataPref = await resPref.json();
-        setPreferenceId(dataPref.id);
-        setCurrentStep("payment");
+        
+        if (dataPref.id) {
+          setPreferenceId(dataPref.id);
+          setCurrentStep("payment"); // SÓ AGORA MUDA PARA A TELA DE PAGAMENTO
+        }
       }
     } catch (err) {
-      alert("Houve um erro no processamento. Tente novamente.");
-      console.error(err);
+      alert("Erro ao enviar dados. Tente novamente.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Abre o checkout do Mercado Pago
+  // 4. ABRE O CHECKOUT DO MERCADO PAGO AO CLICAR NO BOTÃO
   const handleOpenPayment = () => {
     if (!window.MercadoPago || !preferenceId) return;
+    
     const mp = new window.MercadoPago('APP_USR-7bab0ee2-dbcf-43da-99b4-5f621e8e6074', {
       locale: 'pt-BR'
     });
     
     mp.checkout({
       preference: { id: preferenceId },
-      autoOpen: true
+      autoOpen: true // Abre o modal ou janela do Mercado Pago
     });
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-slate-100 selection:bg-yellow-500/30">
+    <div className="min-h-screen bg-[#0f1115] text-slate-100">
       <Header />
       <main className="pt-28 pb-12 container px-4 max-w-5xl mx-auto">
-        <nav className="mb-16 border border-white/10 bg-slate-800/30 backdrop-blur-md rounded-2xl overflow-hidden shadow-2xl">
+        
+        {/* PROGRESSO */}
+        <nav className="mb-16 border border-white/10 bg-slate-800/30 rounded-2xl overflow-hidden">
           <ol className="flex divide-x divide-white/5">
-            {steps.map((step, i) => {
-              const isActive = currentStep === step.id;
-              const isCompleted = stepIndex[currentStep] > i;
-              return (
-                <li key={step.id} className="relative flex-1 group">
-                  <div className={`flex items-center gap-4 px-6 py-5 text-sm ${isActive || isCompleted ? 'bg-black/20' : ''}`}>
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 ${
-                      isActive ? "bg-yellow-500 border-yellow-400 text-black shadow-[0_0_20px_rgba(234,179,8,0.3)] scale-110"
-                      : isCompleted ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                      : "bg-slate-900 border-slate-700 text-slate-500"
-                    }`}>
-                      {isCompleted ? <CheckCircle className="h-5 w-5" /> : (i + 1)}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 text-left">PASSO 0{i+1}</span>
-                      <span className={`text-sm font-black text-left ${isActive ? "text-white" : "text-slate-600"}`}>{step.label}</span>
-                    </div>
+            {steps.map((step, i) => (
+              <li key={step.id} className="relative flex-1">
+                <div className={`flex items-center gap-4 px-6 py-5 ${currentStep === step.id ? 'bg-black/20' : ''}`}>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 ${
+                    currentStep === step.id ? "bg-yellow-500 border-yellow-400 text-black shadow-[0_0_20px_rgba(234,179,8,0.3)]"
+                    : stepIndex[currentStep] > i ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                    : "bg-slate-900 border-slate-700 text-slate-500"
+                  }`}>
+                    {stepIndex[currentStep] > i ? <CheckCircle className="h-5 w-5" /> : (i + 1)}
                   </div>
-                </li>
-              );
-            })}
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">PASSO 0{i+1}</span>
+                    <span className={`text-sm font-black uppercase ${currentStep === step.id ? "text-white" : "text-slate-600"}`}>{step.label}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
           </ol>
         </nav>
 
-        <div className="bg-slate-900/50 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 shadow-2xl">
+        {/* CONTEÚDO */}
+        <div className="bg-slate-900/50 border border-white/5 rounded-[2rem] p-8 shadow-2xl">
+          
           {isProcessing && (
-            <div className="flex flex-col items-center py-20 animate-pulse">
+            <div className="flex flex-col items-center py-20 text-center">
               <Loader2 className="h-12 w-12 text-yellow-500 animate-spin mb-4" />
-              <h3 className="font-black text-2xl uppercase tracking-tighter text-white">Gerando Laudo Pericial...</h3>
-              <p className="text-slate-500 mt-2">Aguarde, nossa IA está analisando a originalidade do veículo.</p>
+              <h3 className="text-2xl font-black uppercase">Enviando Dados...</h3>
+              <p className="text-slate-500">Estamos preparando sua ficha técnica.</p>
             </div>
           )}
 
@@ -177,60 +179,48 @@ const Avaliacao = () => {
 
           {!isProcessing && currentStep === "photos" && (
             <PhotoUpload 
-              onSubmit={(p) => { setPhotos(p); prepareAvaliacao(p); }} 
+              onSubmit={(p) => handleUploadAndGoToPayment(p)} 
               onBack={() => setCurrentStep("form")}
             />
           )}
 
           {currentStep === "payment" && (
-            <div className="max-w-md mx-auto py-4 animate-in fade-in slide-in-from-bottom-4">
-              <div className="bg-[#161920] rounded-[2rem] border border-white/10 overflow-hidden shadow-inner p-8 text-center">
-                <div className="inline-flex p-4 rounded-2xl bg-yellow-500/10 mb-4">
-                  <CreditCard className="h-10 w-10 text-yellow-500" />
-                </div>
-                <h2 className="text-2xl font-black text-white uppercase mb-2">Liberação do Laudo</h2>
-                <p className="text-slate-500 text-xs mb-8">Pague com Pix para receber o laudo instantaneamente</p>
+            <div className="max-w-md mx-auto py-8 text-center space-y-8">
+              <div className="bg-[#161920] border border-white/10 p-8 rounded-[2rem] shadow-inner">
+                <CreditCard className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-black uppercase mb-6">Pagar Avaliação</h2>
                 
-                <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl mb-8 border border-white/5">
-                  <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Preço Promocional</span>
+                <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl mb-8">
+                  <span className="text-slate-400 font-bold uppercase text-xs">Valor Total</span>
                   <span className="text-3xl font-black text-white">R$ 1,00</span>
                 </div>
 
                 <Button 
-                  className="w-full h-16 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-lg rounded-2xl mb-6 shadow-lg shadow-yellow-500/10 transition-transform active:scale-95"
+                  className="w-full h-16 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-lg rounded-2xl mb-6 shadow-lg shadow-yellow-500/20"
                   onClick={handleOpenPayment}
                 >
-                  ABRIR PAGAMENTO PIX
+                  PAGAR AGORA (PIX / CARTÃO)
                 </Button>
                 
-                <div className="flex flex-col items-center gap-3">
-                   <p className="text-[10px] text-slate-500 uppercase font-bold flex items-center gap-2">
-                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                    Pagamento 100% seguro via Mercado Pago
-                  </p>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
-                    <Loader2 className="h-3 w-3 text-yellow-500 animate-spin" />
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Aguardando confirmação...</span>
-                  </div>
+                <div className="flex items-center justify-center gap-3">
+                  <Loader2 className="h-4 w-4 text-yellow-500 animate-spin" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Aguardando confirmação do banco...</span>
                 </div>
               </div>
             </div>
           )}
 
           {currentStep === "success" && (
-            <div className="py-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+            <div className="py-12 text-center space-y-8">
+              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20">
                 <CheckCircle className="h-12 w-12 text-emerald-500" />
               </div>
-              <div>
-                <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">Laudo Disponível!</h2>
-                <p className="text-slate-400">Seu certificado de originalidade foi gerado com sucesso.</p>
-              </div>
+              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Laudo Disponível!</h2>
               <Button 
-                className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl hover:bg-slate-200 shadow-xl transition-all hover:scale-105"
+                className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl hover:bg-slate-200 shadow-xl"
                 onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
               >
-                ACESSAR RELATÓRIO COMPLETO
+                VER MEU RELATÓRIO COMPLETO
               </Button>
             </div>
           )}
