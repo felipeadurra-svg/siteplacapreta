@@ -41,11 +41,10 @@ const Avaliacao = () => {
   const fetchPreference = async () => {
     setErrorLoadingPayment(false);
     try {
-      // Endpoint corrigido para bater com o seu backend no Render
       const res = await fetch("https://siteplacapreta.onrender.com/create_preference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}) // Enviando corpo vazio para evitar erro 422
+        body: JSON.stringify({}) 
       });
       
       const data = await res.json();
@@ -66,15 +65,14 @@ const Avaliacao = () => {
     }
   }, [currentStep]);
 
-  // Função principal que processa o pagamento e envia os dados para o backend
   const handlePaymentAndGenerate = async () => {
     if (!window.MercadoPago || !preferenceId) return;
 
     setIsProcessing(true);
     
     try {
-      // 1. Abre o Checkout Pro do Mercado Pago
-      const mp = new window.MercadoPago('APP_USR-9c54b89f-6fec-46ec-bde6-e975a8f1d962', {
+      // INSTÂNCIA COM SUA CHAVE DE PRODUÇÃO ATUALIZADA
+      const mp = new window.MercadoPago('APP_USR-7bab0ee2-dbcf-43da-99b4-5f621e8e6074', {
         locale: 'pt-BR'
       });
       
@@ -83,7 +81,6 @@ const Avaliacao = () => {
         autoOpen: true
       });
 
-      // 2. Prepara os dados para o backend (Multipart FormData)
       const submissionData = new FormData();
       
       if (formData) {
@@ -93,7 +90,6 @@ const Avaliacao = () => {
         submissionData.append("ano", formData.ano);
       }
 
-      // Mapeamento exato das chaves que o backend espera
       const photoKeys: Record<string, string> = {
         frente: "foto_frente",
         traseira: "foto_traseira",
@@ -112,7 +108,6 @@ const Avaliacao = () => {
         }
       });
 
-      // 3. Envia para o backend processar a IA
       const res = await fetch("https://siteplacapreta.onrender.com/avaliacao", {
         method: "POST",
         body: submissionData
@@ -122,7 +117,6 @@ const Avaliacao = () => {
 
       if (data.ok) {
         setLaudoId(data.id);
-        // Pequeno delay para o usuário ver o feedback de "processando"
         setTimeout(() => setCurrentStep("success"), 2000);
       } else {
         throw new Error("Erro no processamento do laudo");
@@ -141,19 +135,19 @@ const Avaliacao = () => {
       <Header />
       
       <main className="pt-24 pb-12 container px-4 max-w-4xl mx-auto">
-        {/* Barra de Progresso */}
+        {/* Barra de Progresso - Cores Originais */}
         <div className="flex items-center justify-between mb-12 relative">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 -z-10"></div>
           {steps.map((label, i) => (
             <div key={label} className="flex flex-col items-center gap-2 bg-slate-50 px-2">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
                 stepIndex[currentStep] >= i 
-                ? "bg-yellow-500 border-yellow-500 text-black shadow-lg shadow-yellow-200" 
+                ? "bg-yellow-500 border-yellow-500 text-black shadow-lg" 
                 : "bg-white border-slate-200 text-slate-400"
               }`}>
                 {i + 1}
               </div>
-              <span className={`text-xs font-bold uppercase tracking-tighter ${
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${
                 stepIndex[currentStep] >= i ? "text-slate-900" : "text-slate-400"
               }`}>
                 {label}
@@ -162,7 +156,6 @@ const Avaliacao = () => {
           ))}
         </div>
 
-        {/* Passo 1: Formulário de Dados */}
         {currentStep === "form" && (
           <VehicleForm 
             onSubmit={(data) => {
@@ -172,7 +165,6 @@ const Avaliacao = () => {
           />
         )}
 
-        {/* Passo 2: Upload de Fotos */}
         {currentStep === "photos" && (
           <PhotoUpload 
             onSubmit={(p) => {
@@ -183,32 +175,31 @@ const Avaliacao = () => {
           />
         )}
         
-        {/* Passo 3: Pagamento */}
         {currentStep === "payment" && (
           <div className="max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
               <div className="bg-slate-900 p-8 text-center text-white">
                 <CreditCard className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-black italic">PAGAMENTO</h2>
+                <h2 className="text-2xl font-black italic uppercase">PAGAMENTO</h2>
                 <p className="text-slate-400 text-sm">Checkout Seguro via Mercado Pago</p>
               </div>
 
               <div className="p-8 space-y-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-bottom border-dashed border-slate-200">
+                  <div className="flex justify-between items-center pb-4 border-b border-dashed border-slate-200">
                     <span className="text-slate-600 font-medium">Laudo Técnico Pericial</span>
                     <span className="text-xl font-black text-slate-900">R$ 99,90</span>
                   </div>
-                  <div className="flex gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-xl text-xs font-bold">
+                  <div className="flex gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-xl text-[10px] font-bold uppercase">
                     <ShieldCheck className="h-4 w-4" />
-                    SEU LAUDO SERÁ GERADO IMEDIATAMENTE APÓS O PAGAMENTO
+                    LIBERAÇÃO IMEDIATA APÓS O PAGAMENTO
                   </div>
                 </div>
 
                 {errorLoadingPayment ? (
                   <div className="text-center p-4 bg-red-50 rounded-xl">
                     <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-sm text-red-600 font-bold mb-3">Erro ao carregar o pagamento.</p>
+                    <p className="text-sm text-red-600 font-bold mb-3">Erro ao carregar pagamento.</p>
                     <Button onClick={fetchPreference} variant="outline" className="text-xs uppercase">
                       Tentar Novamente
                     </Button>
@@ -231,14 +222,13 @@ const Avaliacao = () => {
                 )}
                 
                 <p className="text-[10px] text-center text-slate-400 uppercase font-bold tracking-widest">
-                  Ambiente Criptografado de Ponta a Ponta
+                  Ambiente Criptografado
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Passo 4: Sucesso */}
         {currentStep === "success" && (
           <div className="max-w-md mx-auto text-center space-y-8 animate-in zoom-in-95 duration-700">
             <div className="relative inline-block">
@@ -247,9 +237,9 @@ const Avaliacao = () => {
             </div>
             
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 italic">LAUDO GERADO!</h2>
+              <h2 className="text-3xl font-black text-slate-900 italic uppercase">LAUDO GERADO!</h2>
               <p className="text-slate-600 font-medium">
-                Seu veículo foi analisado com sucesso pela nossa perícia técnica.
+                Sua perícia técnica foi concluída com sucesso.
               </p>
             </div>
 
@@ -258,15 +248,15 @@ const Avaliacao = () => {
                 className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg transition-all"
                 onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
               >
-                VISUALIZAR LAUDO COMPLETO
+                VISUALIZAR LAUDO
               </Button>
               <p className="text-xs text-slate-400 font-bold uppercase">
-                ID do Laudo: {laudoId}
+                ID: {laudoId}
               </p>
             </div>
             
             <Button variant="ghost" className="text-slate-400 font-bold" onClick={() => window.location.reload()}>
-              REALIZAR NOVA AVALIAÇÃO
+              NOVA AVALIAÇÃO
             </Button>
           </div>
         )}
