@@ -181,24 +181,28 @@ async def create_preference(request: Request):
 async def webhook(request: Request):
     try:
         data = await request.json()
-        print(f"--- WEBHOOK RECEBIDO: {data} ---") # Log para debug no Render
+        print(f"--- NOTIFICAÇÃO RECEBIDA: {data} ---")
 
-        # O Mercado Pago pode enviar o ID de formas diferentes dependendo da versão
+        # Captura o ID exatamente como veio no seu log: data -> id
         payment_id = None
-        if data.get("type") == "payment":
-            payment_id = data.get("data", {}).get("id")
-        elif data.get("action", "").startswith("payment"):
-            payment_id = data.get("data", {}).get("id") or data.get("id")
+        if "data" in data and "id" in data["data"]:
+            payment_id = data["data"]["id"]
+        elif "id" in data:
+            payment_id = data["id"]
 
         if payment_id:
-            print(f"Consultando pagamento: {payment_id}")
+            print(f"Buscando detalhes do pagamento: {payment_id}")
+            # Importante: Garantir que o ID seja string
             payment_info = sdk.payment().get(str(payment_id))
             
-            if payment_info["response"]["status"] == "approved":
-                cliente_id = payment_info["response"].get("external_reference")
-                print(f"Pagamento aprovado para o cliente: {cliente_id}")
+            if payment_info["status"] == 200 or payment_info["status"] == 201:
+                p_data = payment_info["response"]
+                status = p_data.get("status")
+                cliente_id = p_data.get("external_reference")
+                
+                print(f"Status do pagamento: {status} | Cliente: {cliente_id}")
 
-                if cliente_id:
+                if status == "approved" and cliente_id:
                     pasta = os.path.join(UPLOAD_DIR, cliente_id)
                     json_path = os.path.join(pasta, "dados.json")
                     
@@ -207,21 +211,25 @@ async def webhook(request: Request):
                             dados = json.load(f)
                         
                         if not dados.get("pago"):
-                            print(f"Iniciando geração do laudo IA para {cliente_id}...")
+                            print(f"✅ Pagamento confirmado! Gerando laudo para {cliente_id}")
                             relatorio = gerar_relatorio(dados["fotos_map"])
                             dados["relatorio_ai"] = relatorio
                             dados["pago"] = True
                             
                             with open(json_path, "w", encoding="utf-8") as f:
                                 json.dump(dados, f, ensure_ascii=False, indent=4)
-                            print("Laudo gerado e salvo com sucesso!")
+                            print("✅ Laudo salvo com sucesso!")
+                        else:
+                            print("⚠️ Este laudo já constava como pago.")
                     else:
-                        print(f"ERRO: Pasta {pasta} não encontrada no servidor.")
+                        print(f"❌ Erro: Pasta do cliente {cliente_id} não encontrada.")
+            else:
+                print(f"❌ Erro ao consultar Mercado Pago: {payment_info['status']}")
         else:
-            print("Webhook recebido, mas sem ID de pagamento válido.")
+            print("⚠️ Webhook ignorado: Estrutura de ID não reconhecida.")
 
     except Exception as e:
-        print(f"ERRO CRÍTICO NO WEBHOOK: {str(e)}")
+        print(f"🔥 ERRO NO PROCESSAMENTO: {str(e)}")
     
     return {"status": "ok"}
 
