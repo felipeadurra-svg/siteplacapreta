@@ -3,14 +3,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import VehicleForm, { type AvaliacaoFormData } from "@/components/VehicleForm";
 import PhotoUpload, { type PhotoData } from "@/components/PhotoUpload";
-import PaymentPage from "@/components/PaymentPage";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, CreditCard, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Step = "form" | "photos" | "payment" | "success";
 
-// 1. Melhoria na declaração global para evitar erros de compilação
 declare global {
   interface Window {
     MercadoPago: any;
@@ -25,13 +24,10 @@ const Avaliacao = () => {
   const [laudoId, setLaudoId] = useState<string | null>(null);
 
   const steps = ["Dados", "Fotos", "Pagamento", "Concluído"];
-  // 2. Tipagem explícita para o indexador evitar erro de TS7053
   const stepIndex: Record<Step, number> = { form: 0, photos: 1, payment: 2, success: 3 };
 
   useEffect(() => {
-    // 3. Verificação para não carregar o script múltiplas vezes
     if (document.getElementById("mp-sdk")) return;
-
     const script = document.createElement("script");
     script.id = "mp-sdk";
     script.src = "https://sdk.mercadopago.com/js/v2";
@@ -73,48 +69,48 @@ const Avaliacao = () => {
   };
 
   const handlePayment = async () => {
-    // 4. Verificação de segurança: O SDK carregou?
     if (!window.MercadoPago) {
-      alert("O sistema de pagamento ainda está carregando. Por favor, aguarde um instante.");
+      alert("O sistema de pagamento está carregando. Tente novamente em instantes.");
       return;
     }
 
     setIsProcessing(true);
 
     try {
+      // 1. Chama seu novo Payment.py através da rota do backend
       const prefRes = await fetch("https://siteplacapreta.onrender.com/create_preference", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [{ title: "Laudo Tecnico", unit_price: 99.90 }] })
+        headers: { "Content-Type": "application/json" }
       });
       
       const { id: preferenceId } = await prefRes.json();
 
-      // 5. Inicialização correta
+      // 2. Inicializa o checkout com sua chave pública
       const mp = new window.MercadoPago('APP_USR-9c54b89f-6fec-46ec-bde6-e975a8f1d962', {
         locale: 'pt-BR'
       });
 
-      // Abre o checkout (procedimento padrão para integração Pro/Modal)
       mp.checkout({
         preference: { id: preferenceId },
         autoOpen: true,
       });
 
+      // 3. Processa a geração do laudo enquanto o usuário paga
       const respostaLaudo = await enviarParaBackend();
       if (respostaLaudo?.id) {
         setLaudoId(respostaLaudo.id);
       }
 
+      // Simula tempo de finalização
       setTimeout(() => {
         setIsProcessing(false);
         setCurrentStep("success");
-      }, 2000);
+      }, 3000);
 
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      alert("Erro ao processar pagamento ou gerar laudo.");
+      alert("Houve um problema ao iniciar o pagamento.");
     }
   };
 
@@ -122,45 +118,89 @@ const Avaliacao = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-16">
-        <div className="container py-12 px-4">
-          <div className="flex items-center justify-center gap-2 mb-12">
+        <div className="container py-12 px-4 max-w-4xl mx-auto">
+          {/* STEPPER */}
+          <div className="flex items-center justify-center gap-4 mb-12">
             {steps.map((label, i) => (
               <div key={label} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                  stepIndex[currentStep] >= i ? "bg-yellow-500 text-black" : "bg-gray-300"
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  stepIndex[currentStep] >= i ? "bg-yellow-500 text-black" : "bg-muted text-muted-foreground"
                 }`}>
                   {i + 1}
                 </div>
-                <span className="text-xs">{label}</span>
+                <span className={`text-xs hidden md:inline ${stepIndex[currentStep] === i ? "font-bold" : ""}`}>
+                  {label}
+                </span>
               </div>
             ))}
           </div>
 
+          {/* FORMULÁRIO */}
           {currentStep === "form" && <VehicleForm onSubmit={handleFormSubmit} />}
-          {currentStep === "photos" && <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />}
-          {currentStep === "payment" && <PaymentPage onPaymentConfirm={handlePayment} onBack={() => setCurrentStep("photos")} isProcessing={isProcessing} />}
           
-          {currentStep === "success" && (
-            <div className="text-center animate-in fade-in duration-700">
-              <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-              <h2 className="text-2xl font-bold mt-4">Avaliação enviada com sucesso!</h2>
-              <p className="text-gray-500 mt-2">O pagamento foi processado e seu laudo técnico já está disponível.</p>
-              <div className="flex flex-col gap-3 items-center mt-6">
-                <Button 
-                  className="bg-green-700 hover:bg-green-800 text-white px-8 h-12 text-lg"
-                  onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
-                >
-                  Visualizar Laudo Técnico
-                </Button>
-                <Link to="/"><Button variant="ghost" className="mt-2">Voltar ao início</Button></Link>
-              </div>
+          {/* UPLOAD DE FOTOS */}
+          {currentStep === "photos" && (
+            <PhotoUpload onSubmit={handlePhotosSubmit} onBack={() => setCurrentStep("form")} />
+          )}
+          
+          {/* TELA DE PAGAMENTO INTEGRADA */}
+          {currentStep === "payment" && (
+            <div className="max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Finalizar Avaliação
+                  </CardTitle>
+                  <CardDescription>
+                    Pague com segurança via Mercado Pago para gerar seu laudo técnico.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Serviço:</span>
+                      <span className="font-medium">Laudo Técnico Placa Preta</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <span>Total:</span>
+                      <span className="text-green-600">R$ 100,00</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <Button 
+                      className="w-full h-12 text-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                      onClick={handlePayment}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        "Pagar com Mercado Pago"
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCurrentStep("photos")}
+                      disabled={isProcessing}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Voltar para Fotos
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
-};
-
-export default Avaliacao;
+          
+          {/* SUCESSO */}
+          {currentStep === "success" && (
+            <div className="text-center animate-in zoom-in duration-500 max-w-md mx-auto">
+              <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-12 w-12 text-green-600" />
+              </div>
+              <h2 className="text
