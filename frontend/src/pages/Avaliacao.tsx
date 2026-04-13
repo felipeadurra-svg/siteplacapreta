@@ -3,9 +3,10 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import VehicleForm, { type AvaliacaoFormData } from "@/components/VehicleForm";
 import PhotoUpload, { type PhotoData } from "@/components/PhotoUpload";
-import { CheckCircle, CreditCard, Loader2, ShieldCheck, ChevronRight } from "lucide-react";
+import { CheckCircle, CreditCard, Loader2, ShieldCheck, ChevronRight, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Definição dos passos do formulário
 type Step = "form" | "photos" | "payment" | "success";
 
 declare global {
@@ -23,7 +24,6 @@ const Avaliacao = () => {
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [errorLoadingPayment, setErrorLoadingPayment] = useState(false);
 
-  // Mudei o nome para facilitar o mapeamento visual
   const steps = [
     { id: "form", label: "Dados do Veículo" },
     { id: "photos", label: "Enviar Fotos" },
@@ -32,6 +32,7 @@ const Avaliacao = () => {
   ];
   const stepIndex: Record<Step, number> = { form: 0, photos: 1, payment: 2, success: 3 };
 
+  // Carrega o SDK do Mercado Pago
   useEffect(() => {
     if (document.getElementById("mp-sdk")) return;
     const script = document.createElement("script");
@@ -41,6 +42,7 @@ const Avaliacao = () => {
     document.body.appendChild(script);
   }, []);
 
+  // Gera a preferência de pagamento ao chegar na etapa
   const fetchPreference = async () => {
     setErrorLoadingPayment(false);
     try {
@@ -50,24 +52,38 @@ const Avaliacao = () => {
         body: JSON.stringify({}) 
       });
       const data = await res.json();
-      if (data.id) setPreferenceId(data.id);
+      if (data.id) {
+        setPreferenceId(data.id);
+      } else {
+        throw new Error("Erro ao gerar Preference ID");
+      }
     } catch (err) {
+      console.error("Erro ao gerar pagamento:", err);
       setErrorLoadingPayment(true);
     }
   };
 
   useEffect(() => {
-    if (currentStep === "payment") fetchPreference();
+    if (currentStep === "payment") {
+      fetchPreference();
+    }
   }, [currentStep]);
 
   const handlePaymentAndGenerate = async () => {
     if (!window.MercadoPago || !preferenceId) return;
+
     setIsProcessing(true);
+    
     try {
+      // INSTÂNCIA DE PRODUÇÃO
       const mp = new window.MercadoPago('APP_USR-7bab0ee2-dbcf-43da-99b4-5f621e8e6074', {
         locale: 'pt-BR'
       });
-      mp.checkout({ preference: { id: preferenceId }, autoOpen: true });
+      
+      mp.checkout({
+        preference: { id: preferenceId },
+        autoOpen: true
+      });
 
       const submissionData = new FormData();
       if (formData) {
@@ -94,12 +110,17 @@ const Avaliacao = () => {
         method: "POST",
         body: submissionData
       });
+
       const data = await res.json();
       if (data.ok) {
         setLaudoId(data.id);
         setTimeout(() => setCurrentStep("success"), 2000);
+      } else {
+        throw new Error("Erro no processamento");
       }
+
     } catch (err) {
+      console.error(err);
       alert("Erro ao processar. Tente novamente.");
     } finally {
       setIsProcessing(false);
@@ -112,8 +133,8 @@ const Avaliacao = () => {
       
       <main className="pt-28 pb-12 container px-4 max-w-5xl mx-auto">
         
-        {/* NOVA BARRA DE PROGRESSO COM SETAS (CHEVRONS) */}
-        <nav className="mb-16 border border-white/5 bg-[#14161b] rounded-2xl overflow-hidden shadow-2xl">
+        {/* BARRA DE PROGRESSO COM ACABAMENTO CINZA FOSCO E SETAS */}
+        <nav className="mb-16 border border-white/10 bg-slate-800/30 backdrop-blur-md rounded-2xl overflow-hidden shadow-2xl">
           <ol className="flex divide-x divide-white/5">
             {steps.map((step, i) => {
               const isActive = currentStep === step.id;
@@ -121,35 +142,44 @@ const Avaliacao = () => {
               
               return (
                 <li key={step.id} className="relative flex-1 group">
-                  <div className={`flex items-center gap-4 px-6 py-5 text-sm transition-colors duration-300 ${isActive || isCompleted ? 'bg-black/40' : ''}`}>
+                  <div className={`flex items-center gap-4 px-6 py-5 text-sm transition-all duration-300 ${
+                    isActive || isCompleted ? 'bg-black/20' : ''
+                  }`}>
                     
-                    {/* Número/Ícone do Passo */}
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 transition-all duration-300 ${
+                    {/* Indicador Numérico */}
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-500 ${
                       isActive 
-                        ? "bg-yellow-500 border-yellow-400 text-black shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+                        ? "bg-yellow-500 border-yellow-400 text-black shadow-[0_0_20px_rgba(234,179,8,0.3)] scale-110"
                         : isCompleted
-                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-500"
-                          : "bg-slate-900 border-slate-800 text-slate-600"
+                          ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                          : "bg-slate-900 border-slate-700 text-slate-500"
                     }`}>
                       {isCompleted ? <CheckCircle className="h-5 w-5" /> : (i + 1)}
                     </div>
                     
-                    {/* Texto do Passo */}
                     <div className="flex flex-col">
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? "text-slate-400" : "text-slate-600"}`}>PASSO 0{i+1}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                        isActive ? "text-slate-300" : "text-slate-500"
+                      }`}>
+                        PASSO 0{i+1}
+                      </span>
                       <span className={`text-sm font-black tracking-tight ${
                         isActive 
                         ? "text-white" 
                         : isCompleted
-                          ? "text-slate-300"
-                          : "text-slate-500"
-                      }`}>{step.label}</span>
+                          ? "text-slate-200"
+                          : "text-slate-600"
+                      }`}>
+                        {step.label}
+                      </span>
                     </div>
 
-                    {/* A Flexinha Indicadora (apenas entre os passos) */}
+                    {/* Seta Indicadora (Chevron) */}
                     {i < steps.length - 1 && (
-                      <div className="absolute top-1/2 -right-3 -translate-y-1/2 z-10 p-1 bg-[#14161b] rounded-full border border-white/5 group-hover:border-yellow-500/30 transition-colors">
-                        <ChevronRight className={`h-4 w-4 ${isCompleted || isActive ? 'text-yellow-500/50' : 'text-slate-700'}`} />
+                      <div className="absolute top-1/2 -right-3 -translate-y-1/2 z-10 p-1 bg-[#1e232d] rounded-full border border-white/10 shadow-lg">
+                        <ChevronRight className={`h-4 w-4 ${
+                          isCompleted || isActive ? 'text-yellow-500' : 'text-slate-600'
+                        }`} />
                       </div>
                     )}
                   </div>
@@ -159,7 +189,7 @@ const Avaliacao = () => {
           </ol>
         </nav>
 
-        {/* Card Principal - Glassmorphism */}
+        {/* ÁREA DE CONTEÚDO PRINCIPAL */}
         <div className="bg-slate-900/50 backdrop-blur-md border border-white/5 rounded-[2rem] p-8 shadow-2xl">
           {currentStep === "form" && (
             <VehicleForm 
@@ -194,7 +224,7 @@ const Avaliacao = () => {
                 <div className="p-8 space-y-8">
                   <div className="flex justify-between items-end">
                     <span className="text-slate-500 text-sm font-bold uppercase tracking-widest">Valor Total</span>
-                    <span className="text-4xl font-black text-white leading-none">R$ 99,90</span>
+                    <span className="text-4xl font-black text-white leading-none">R$ 1,00</span>
                   </div>
 
                   <div className="space-y-4">
@@ -210,7 +240,7 @@ const Avaliacao = () => {
                     
                     <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
                       <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                      Pagamento processado pelo Mercado Pago
+                      Pagamento via Mercado Pago
                     </div>
                   </div>
                 </div>
@@ -225,7 +255,7 @@ const Avaliacao = () => {
               </div>
               <div>
                 <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase mb-2">Laudo Pronto!</h2>
-                <p className="text-slate-400">A inteligência artificial concluiu a análise do seu clássico.</p>
+                <p className="text-slate-400">Análise concluída com sucesso.</p>
               </div>
               <Button 
                 className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl hover:bg-slate-200 transition-colors shadow-lg shadow-black/20"
