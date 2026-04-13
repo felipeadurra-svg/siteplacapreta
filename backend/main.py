@@ -215,6 +215,16 @@ async def avaliacao(
         
     return {"ok": True, "id": cliente_id}
 
+@app.get("/check_status/{id}")
+async def check_status(id: str):
+    """
+    Rota para o Frontend verificar se o laudo já foi processado e salvo.
+    """
+    path = os.path.join(UPLOAD_DIR, id, "dados.json")
+    if os.path.exists(path):
+        return JSONResponse(content={"status": "ready", "id": id})
+    return JSONResponse(content={"status": "pending"}, status_code=404)
+
 @app.get("/avaliacoes", response_class=HTMLResponse)
 def listar_avaliacoes():
     clientes = []
