@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 
 type Step = "form" | "photos" | "payment" | "success";
 
-declare global { interface Window { MercadoPago: any; } }
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
 
 const Avaliacao = () => {
   const [currentStep, setCurrentStep] = useState<Step>("form");
   const [formData, setFormData] = useState<AvaliacaoFormData | null>(null);
-  const [photos, setPhotos] = useState<PhotoData>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [laudoId, setLaudoId] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
@@ -37,37 +40,38 @@ const Avaliacao = () => {
     document.body.appendChild(script);
   }, []);
 
-  // 2. MONITORAMENTO DE PAGAMENTO (VIGIA O BACKEND)
+  // 2. MONITORAMENTO DO STATUS (POLLING NO BACKEND)
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
-    // Só inicia o cronômetro se estivermos na tela de pagamento e tivermos um ID
+
     if (currentStep === "payment" && laudoId) {
-      console.log("Iniciando monitoramento para o Laudo ID:", laudoId);
+      console.log("Iniciando vigília para o Laudo:", laudoId);
 
       interval = setInterval(async () => {
         try {
           const res = await fetch(`https://siteplacapreta.onrender.com/check_status/${laudoId}`);
           if (res.ok) {
             const data = await res.json();
-            console.log("Status da transação:", data.status);
+            console.log("Status atual do servidor:", data.status);
 
             if (data.status === "ready") {
-              console.log("Pagamento confirmado via Webhook!");
+              console.log("Pagamento detectado! Redirecionando...");
               setCurrentStep("success");
               clearInterval(interval);
             }
           }
         } catch (e) {
-          console.error("Erro ao verificar status no servidor:", e);
+          console.error("Erro ao consultar status:", e);
         }
-      }, 4000); // 4 segundos é o tempo seguro para evitar bloqueio de IP
+      }, 4000); // Consulta a cada 4 segundos
     }
-    
-    return () => { if (interval) clearInterval(interval); };
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [currentStep, laudoId]);
 
-  // 3. ENVIO DE DADOS (CRIA O LAUDO PENDENTE)
+  // 3. ENVIO DOS DADOS E CRIAÇÃO DA PREFERÊNCIA
   const handleFinalSubmit = async (currentPhotos: PhotoData) => {
     setIsProcessing(true);
     try {
@@ -80,16 +84,23 @@ const Avaliacao = () => {
       }
 
       const photoKeys: Record<string, string> = {
-        frente: "foto_frente", traseira: "foto_traseira", lateralDireita: "foto_lateral_direita",
-        lateralEsquerda: "foto_lateral_esquerda", interior: "foto_interior", painel: "foto_painel",
-        motor: "foto_motor", chassi: "foto_chassi"
+        frente: "foto_frente",
+        traseira: "foto_traseira",
+        lateralDireita: "foto_lateral_direita",
+        lateralEsquerda: "foto_lateral_esquerda",
+        interior: "foto_interior",
+        painel: "foto_painel",
+        motor: "foto_motor",
+        chassi: "foto_chassi"
       };
 
       Object.entries(currentPhotos).forEach(([key, file]) => {
-        if (file instanceof File) submissionData.append(photoKeys[key] || `foto_${key}`, file);
+        if (file instanceof File) {
+          submissionData.append(photoKeys[key] || `foto_${key}`, file);
+        }
       });
 
-      // Passo A: Salva os dados e fotos no servidor
+      // Passo 1: Enviar fotos e dados para o Render
       const res = await fetch("https://siteplacapreta.onrender.com/avaliacao", {
         method: "POST",
         body: submissionData
@@ -97,10 +108,9 @@ const Avaliacao = () => {
       const data = await res.json();
 
       if (data.id) {
-        setLaudoId(data.id);
-        console.log("ID da Perícia gerado:", data.id);
+        setLaudoId(data.id); // Salva o ID para o monitoramento acima
 
-        // Passo B: Cria a preferência de pagamento vinculada ao ID do cliente
+        // Passo 2: Criar preferência no Mercado Pago com external_reference
         const resPref = await fetch("https://siteplacapreta.onrender.com/create_preference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -114,21 +124,20 @@ const Avaliacao = () => {
         }
       }
     } catch (err) {
-      console.error("Erro no envio:", err);
-      alert("Houve um erro ao processar seus dados. Tente novamente.");
+      console.error("Erro no processamento final:", err);
+      alert("Erro ao enviar dados. Verifique sua conexão.");
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // 4. ABRIR CHECKOUT MERCADO PAGO
   const handleOpenPayment = () => {
     if (!window.MercadoPago || !preferenceId) {
-      alert("O módulo de pagamento está carregando. Aguarde um instante.");
+      alert("Carregando módulo de pagamento... tente em 2 segundos.");
       return;
     }
     const mp = new window.MercadoPago('APP_USR-7bab0ee2-dbcf-43da-99b4-5f621e8e6074', { locale: 'pt-BR' });
-    
-    // Abre o Checkout Pro (abre em modal ou aba dependendo do dispositivo)
     mp.checkout({ preference: { id: preferenceId }, autoOpen: true });
   };
 
@@ -136,7 +145,8 @@ const Avaliacao = () => {
     <div className="min-h-screen bg-[#0f1115] text-slate-100">
       <Header />
       <main className="pt-28 pb-12 container px-4 max-w-5xl mx-auto">
-        {/* NAVEGAÇÃO DE PASSOS */}
+        
+        {/* PROGRESSO */}
         <nav className="mb-16 border border-white/10 bg-slate-800/30 rounded-2xl overflow-hidden shadow-2xl">
           <ol className="flex divide-x divide-white/5">
             {steps.map((step, i) => (
@@ -149,7 +159,7 @@ const Avaliacao = () => {
                   }`}>
                     {stepIndex[currentStep] > i ? <CheckCircle className="h-5 w-5" /> : (i + 1)}
                   </div>
-                  <div className="flex flex-col hidden sm:flex">
+                  <div className="flex flex-col hidden md:flex">
                     <span className="text-[10px] font-bold uppercase text-slate-500">PASSO 0{i+1}</span>
                     <span className={`text-sm font-black uppercase ${currentStep === step.id ? "text-white" : "text-slate-600"}`}>{step.label}</span>
                   </div>
@@ -159,8 +169,8 @@ const Avaliacao = () => {
           </ol>
         </nav>
 
-        {/* CONTEÚDO PRINCIPAL */}
-        <div className="bg-slate-900/50 border border-white/5 rounded-[2rem] p-8 shadow-2xl min-h-[400px]">
+        {/* ÁREA DE CONTEÚDO */}
+        <div className="bg-slate-900/50 border border-white/5 rounded-[2rem] p-8 shadow-2xl">
           {isProcessing && (
             <div className="flex flex-col items-center py-20">
               <Loader2 className="h-12 w-12 text-yellow-500 animate-spin mb-4" />
@@ -182,9 +192,9 @@ const Avaliacao = () => {
                 <div className="inline-flex p-4 rounded-2xl bg-yellow-500/10 mb-4">
                   <CreditCard className="h-10 w-10 text-yellow-500" />
                 </div>
-                <h2 className="text-2xl font-black uppercase mb-6">Pagar Taxa de Emissão</h2>
+                <h2 className="text-2xl font-black uppercase mb-6">Taxa de Emissão</h2>
                 <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl mb-8">
-                  <span className="text-slate-400 font-bold uppercase text-xs">Valor do Laudo</span>
+                  <span className="text-slate-400 font-bold uppercase text-xs">Valor Total</span>
                   <span className="text-3xl font-black text-white">R$ 1,00</span>
                 </div>
                 <Button 
@@ -198,19 +208,28 @@ const Avaliacao = () => {
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Aguardando confirmação bancária...</span>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-500 px-8">O laudo será liberado automaticamente após a detecção do pagamento pelo Banco Central.</p>
             </div>
           )}
 
           {currentStep === "success" && (
-            <div className="py-12 text-center space-y-8 animate-in fade-in zoom-in duration-500">
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-xl shadow-emerald-500/5">
+            <div className="py-12 text-center space-y-8 animate-in fade-in zoom-in duration-700">
+              <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-xl">
                 <CheckCircle className="h-12 w-12 text-emerald-500" />
               </div>
-              <div>
-                <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">Laudo Disponível!</h2>
-                <p className="text-slate-400 font-medium">Sua perícia técnica foi processada com sucesso.</p>
-              </div>
+              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Laudo Disponível!</h2>
               <Button 
-                className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl hover:bg-slate-200 shadow-white/10 shadow-2xl" 
-                onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`,
+                className="h-16 px-12 bg-white text-black font-black text-lg rounded-2xl hover:bg-slate-200" 
+                onClick={() => window.open(`https://siteplacapreta.onrender.com/cliente/${laudoId}`, '_blank')}
+              >
+                ABRIR RELATÓRIO COMPLETO
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default Avaliacao;
